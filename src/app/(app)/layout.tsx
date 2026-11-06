@@ -4,6 +4,10 @@ import { UserMenu } from "@/components/user-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TeamCredit } from "@/components/team-credit";
 
+// Every signed-in page reads the session and the user's own data on each request, so these
+// routes are allowed to wait on the server. loading.tsx shows a skeleton meanwhile.
+export const instant = false;
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col bg-canvas">
