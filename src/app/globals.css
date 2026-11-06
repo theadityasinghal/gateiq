@@ -1,0 +1,220 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens from DESIGN.md (style reference only; GateIQ uses its own name, logo and copy).
+ * The values below are the light theme. The black theme (the default) overrides them under
+ * :root[data-theme="dark"] further down. DESIGN.md only defines dark surfaces for the navy hero
+ * band, so the black theme extends that: near-black canvas, the same purple CTA, and deep
+ * versions of the pastel card tints.
+ */
+@theme {
+  --font-sans: var(--font-inter), -apple-system, system-ui, "Segoe UI", Helvetica, sans-serif;
+
+  --color-primary: #5645d4;
+  --color-primary-pressed: #4534b3;
+  --color-primary-deep: #3a2a99;
+  --color-on-primary: #ffffff;
+  --color-brand-navy: #0a1530;
+  --color-brand-navy-deep: #070f24;
+  --color-brand-navy-mid: #1a2a52;
+  --color-link-blue: #0075de;
+  --color-link-blue-pressed: #005bab;
+  --color-brand-orange: #dd5b00;
+  --color-brand-orange-deep: #793400;
+  --color-brand-pink: #ff64c8;
+  --color-brand-purple: #7b3ff2;
+  --color-brand-purple-300: #d6b6f6;
+  --color-brand-purple-800: #391c57;
+  --color-brand-teal: #2a9d99;
+  --color-brand-green: #1aae39;
+  --color-brand-yellow: #f5d75e;
+
+  --color-tint-peach: #ffe8d4;
+  --color-tint-rose: #fde0ec;
+  --color-tint-mint: #d9f3e1;
+  --color-tint-lavender: #e6e0f5;
+  --color-tint-sky: #dcecfa;
+  --color-tint-yellow: #fef7d6;
+  --color-tint-yellow-bold: #f9e79f;
+  --color-tint-cream: #f8f5e8;
+  --color-tint-gray: #f0eeec;
+
+  --color-canvas: #ffffff;
+  --color-surface: #f6f5f4;
+  --color-surface-soft: #fafaf9;
+  --color-hairline: #e5e3df;
+  --color-hairline-soft: #ede9e4;
+  --color-hairline-strong: #c8c4be;
+
+  --color-ink-deep: #000000;
+  --color-ink: #1a1a1a;
+  --color-charcoal: #37352f;
+  --color-slate: #5d5b54;
+  --color-steel: #787671;
+  --color-stone: #a4a097;
+  --color-muted: #bbb8b1;
+  --color-on-dark: #ffffff;
+  --color-on-dark-muted: #a4a097;
+
+  /* Tag chips (DESIGN.md badge-tag-*) */
+  --color-tag-purple-fg: #391c57;
+  --color-tag-orange-fg: #793400;
+  --color-tag-green-fg: #0f6b24;
+  --color-tag-sky-fg: #0b4f8a;
+  --color-tag-red-bg: #fde2e2;
+  --color-tag-red-fg: #a51d1d;
+  /* Text that always sits on a light fill, whatever the theme */
+  --color-on-light: #1a1a1a;
+
+  --color-success: #1aae39;
+  --color-warning: #dd5b00;
+  --color-error: #e03131;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
+
+  --shadow-subtle: rgba(15, 15, 15, 0.04) 0px 1px 2px 0px;
+  --shadow-card: rgba(15, 15, 15, 0.08) 0px 4px 12px 0px;
+  --shadow-mockup: rgba(15, 15, 15, 0.2) 0px 24px 48px -8px;
+  --shadow-modal: rgba(15, 15, 15, 0.16) 0px 16px 48px -8px;
+}
+
+:root {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-link-blue: #4ea3f5;
+  --color-link-blue-pressed: #7cbaf7;
+
+  --color-tint-peach: #2e1f14;
+  --color-tint-rose: #2d1822;
+  --color-tint-mint: #13261a;
+  --color-tint-lavender: #1e1a35;
+  --color-tint-sky: #122130;
+  --color-tint-yellow: #29240f;
+  --color-tint-yellow-bold: #3a3112;
+  --color-tint-cream: #232118;
+  --color-tint-gray: #1b1a19;
+
+  --color-canvas: #000000;
+  --color-surface: #141414;
+  --color-surface-soft: #0b0b0b;
+  --color-hairline: #262523;
+  --color-hairline-soft: #1d1c1b;
+  --color-hairline-strong: #3b3936;
+
+  --color-ink-deep: #ffffff;
+  --color-ink: #f2f1ee;
+  --color-charcoal: #e3e0da;
+  --color-slate: #b3afa7;
+  --color-steel: #8e8a83;
+  --color-stone: #6f6b65;
+  --color-muted: #55524d;
+
+  --color-tag-purple-fg: #cdbcf7;
+  --color-tag-orange-fg: #f5b27c;
+  --color-tag-green-fg: #7fd99a;
+  --color-tag-sky-fg: #93c6f3;
+  --color-tag-red-bg: #3a1517;
+  --color-tag-red-fg: #ff9e9e;
+
+  --color-error: #ff6b6b;
+  --color-warning: #f08a3c;
+
+  --shadow-subtle: rgba(0, 0, 0, 0.6) 0px 1px 2px 0px;
+  --shadow-card: rgba(0, 0, 0, 0.6) 0px 4px 12px 0px;
+  --shadow-mockup: rgba(0, 0, 0, 0.7) 0px 24px 48px -8px;
+  --shadow-modal: rgba(0, 0, 0, 0.7) 0px 16px 48px -8px;
+}
+
+html,
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Typography scale from DESIGN.md */
+@utility text-hero {
+  font-size: 80px;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -2px;
+}
+@utility text-display {
+  font-size: 56px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -1px;
+}
+@utility text-h1 {
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.5px;
+}
+@utility text-h2 {
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+}
+@utility text-h3 {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+@utility text-h4 {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+@utility text-h5 {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+@utility text-subtitle {
+  font-size: 18px;
+  line-height: 1.5;
+}
+@utility text-body-sm {
+  font-size: 14px;
+  line-height: 1.5;
+}
+@utility text-caption {
+  font-size: 13px;
+  line-height: 1.4;
+}
+@utility text-micro-upper {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Theme toggle icons follow the active theme, not React state */
+:root[data-theme="dark"] .theme-icon-moon,
+:root[data-theme="light"] .theme-icon-sun {
+  display: none;
+}
