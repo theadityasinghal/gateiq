@@ -16,6 +16,19 @@ function required(name: string): string {
 }
 
 /**
+ * Addresses Vercel gives this deployment (production domain, branch URL, per-deploy URL).
+ * Better Auth rejects sign-in from any origin it doesn't know ("Invalid origin"), so these are
+ * trusted alongside BETTER_AUTH_URL. Vercel sets them itself; they are absent locally.
+ */
+const vercelOrigins = [
+  process.env.VERCEL_PROJECT_PRODUCTION_URL,
+  process.env.VERCEL_BRANCH_URL,
+  process.env.VERCEL_URL,
+]
+  .filter((h): h is string => !!h)
+  .map((h) => `https://${h}`);
+
+/**
  * Email + password sign-in. Users, sessions and password hashes (scrypt) live in our own
  * Postgres tables (no Supabase Auth).
  *
@@ -25,7 +38,8 @@ function required(name: string): string {
  */
 export const auth = betterAuth({
   secret: required("BETTER_AUTH_SECRET"),
-  baseURL: required("BETTER_AUTH_URL"),
+  baseURL: process.env.BETTER_AUTH_URL ?? vercelOrigins[0] ?? required("BETTER_AUTH_URL"),
+  trustedOrigins: vercelOrigins,
   database: drizzleAdapter(db, { provider: "pg", schema: { user, session, account, verification, rateLimit } }),
   emailAndPassword: {
     enabled: true,
