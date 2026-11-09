@@ -3,6 +3,7 @@ import { Logo } from "@/components/logo";
 import { AuthForm } from "./auth-form";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TeamCredit } from "@/components/team-credit";
+import { listPhoneCountries } from "@/lib/phone";
 
 export const metadata = { title: "Sign in" };
 
@@ -26,7 +27,7 @@ export default function SignInPage() {
             <Logo />
           </div>
           <Suspense fallback={<div className="h-80 rounded-lg bg-surface" />}>
-            <AuthForm />
+            <AuthForm countries={listPhoneCountries()} />
           </Suspense>
           <TeamCredit className="mt-12 text-steel lg:hidden" />
         </div>

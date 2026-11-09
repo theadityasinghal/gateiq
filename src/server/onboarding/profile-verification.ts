@@ -16,7 +16,8 @@ export type ProfileInput = {
   iec?: string;
   gstin?: string;
   address?: string;
-  phone?: string;
+  phone: string;
+  phoneCountry: string;
   extra: Record<string, string>;
 };
 
@@ -35,7 +36,7 @@ export function verifyProfile(
   results.push(selfDeclared("legalName", input.legalName, "Entered by you. Will be matched to the GST registry later."));
   if (input.organisation) results.push(selfDeclared("organisation", input.organisation));
   if (input.address) results.push(selfDeclared("address", input.address));
-  if (input.phone) results.push(verifyPhone(input.phone));
+  results.push(verifyPhone(input.phoneCountry, input.phone));
 
   if (role === "consignor") {
     if (input.gstin) results.push(verifyGstin(input.gstin));

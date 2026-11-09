@@ -12,6 +12,7 @@ import {
   index,
   uniqueIndex,
   doublePrecision,
+  bigint,
 } from "drizzle-orm/pg-core";
 import { ROLES } from "@/lib/roles";
 
@@ -26,6 +27,12 @@ export const user = pgTable("user", {
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
   role: roleEnum("role"),
+  /** Lowercase, permanent, used to invite people to cases. Null only for accounts made before usernames existed. */
+  username: text("username").unique(),
+  /** Mobile number in E.164, collected at sign-up. Not yet confirmed by OTP. */
+  phone: text("phone"),
+  /** ISO 3166-1 alpha-2 country chosen next to the number. */
+  phoneCountry: text("phone_country"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -78,6 +85,14 @@ export const verification = pgTable("verification", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** Better Auth rate-limit counters, kept in Postgres so limits hold across serverless instances. */
+export const rateLimit = pgTable("rate_limit", {
+  id: text("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  count: integer("count").notNull(),
+  lastRequest: bigint("last_request", { mode: "number" }).notNull(),
+});
+
 /* ───────────── Profiles and field verification ───────────── */
 
 export const profile = pgTable("profile", {
@@ -89,7 +104,6 @@ export const profile = pgTable("profile", {
   iec: text("iec"),
   gstin: text("gstin"),
   address: text("address"),
-  phone: text("phone"),
   /** Role-specific identifiers (CHA licence, driving licence, employee ID, …). */
   extra: jsonb("extra").$type<Record<string, string>>().notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -140,9 +154,10 @@ export const shipmentCase = pgTable(
       .notNull()
       .references(() => user.id),
     status: caseStatusEnum("status").notNull().default("created"),
-    consigneeName: text("consignee_name").notNull(),
-    consigneeAddress: text("consignee_address").notNull(),
-    consigneeCountry: text("consignee_country").notNull(),
+    /** Typed in by the consignor on cases made before consignees had accounts. New cases leave these empty. */
+    consigneeName: text("consignee_name"),
+    consigneeAddress: text("consignee_address"),
+    consigneeCountry: text("consignee_country"),
     originPlace: text("origin_place").notNull(),
     exportPortCode: text("export_port_code").notNull(),
     destinationCountry: text("destination_country").notNull(),
@@ -180,74 +195,102 @@ export const caseGoodsLine = pgTable(
   (t) => [uniqueIndex("case_goods_line_uq").on(t.caseId, t.lineNo)],
 );
 
-export const caseDocument = pgTable("case_document", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  caseId: uuid("case_id")
-    .notNull()
-    .references(() => shipmentCase.id, { onDelete: "cascade" }),
-  kind: text("kind").notNull(), // msds | temperature_spec | certificate
-  storagePath: text("storage_path").notNull(),
-  fileName: text("file_name").notNull(),
-  mimeType: text("mime_type").notNull(),
-  sizeBytes: integer("size_bytes").notNull(),
-  sha256: text("sha256").notNull(),
-  uploadedBy: text("uploaded_by")
-    .notNull()
-    .references(() => user.id),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
-
-/* ───────────── Filings and the Filed baseline ───────────── */
-
-export const filingSourceEnum = pgEnum("filing_source", ["manual", "ulip"]);
-
-export const filing = pgTable(
-  "filing",
+/** A file (scan, PDF or photo) attached to one submission. */
+export const caseDocument = pgTable(
+  "case_document",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     caseId: uuid("case_id")
       .notNull()
       .references(() => shipmentCase.id, { onDelete: "cascade" }),
-    kind: text("kind").notNull().default("shipping_bill"),
-    documentNumber: text("document_number").notNull(),
-    documentDate: date("document_date").notNull(),
-    portCode: text("port_code").notNull(),
-    source: filingSourceEnum("source").notNull(),
+    submissionId: uuid("submission_id")
+      .notNull()
+      .references(() => caseSubmission.id, { onDelete: "cascade" }),
+    storagePath: text("storage_path").notNull(),
+    fileName: text("file_name").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    sha256: text("sha256").notNull(),
+    uploadedBy: text("uploaded_by")
+      .notNull()
+      .references(() => user.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("filing_case_kind_uq").on(t.caseId, t.kind)],
+  (t) => [index("case_document_submission_idx").on(t.submissionId)],
 );
 
-/** Append-only: every input (typed form now, ULIP payload later) exactly as received. */
-export const filingRawRecord = pgTable("filing_raw_record", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  filingId: uuid("filing_id")
-    .notNull()
-    .references(() => filing.id, { onDelete: "cascade" }),
-  source: filingSourceEnum("source").notNull(),
-  payload: jsonb("payload").notNull(),
-  sha256: text("sha256").notNull(),
-  receivedBy: text("received_by").references(() => user.id),
-  receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
-});
+/* ───────────── People on a case ───────────── */
 
-export const filedBaseline = pgTable(
-  "filed_baseline",
+export const caseMemberStatusEnum = pgEnum("case_member_status", ["pending", "accepted"]);
+
+/**
+ * Someone invited to a case by its owner or by an accepted member. Accepted members can view the case.
+ * Declined, cancelled and removed invites are deleted; the audit log keeps the history.
+ */
+export const caseMember = pgTable(
+  "case_member",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    filingId: uuid("filing_id")
+    caseId: uuid("case_id")
       .notNull()
-      .references(() => filing.id, { onDelete: "cascade" }),
-    rawRecordId: uuid("raw_record_id")
+      .references(() => shipmentCase.id, { onDelete: "cascade" }),
+    userId: text("user_id")
       .notNull()
-      .references(() => filingRawRecord.id),
-    version: integer("version").notNull(),
-    verification: text("verification").notNull(), // self_declared | source_verified
-    normalized: jsonb("normalized").notNull(),
-    provenance: jsonb("provenance").$type<Record<string, string>>().notNull(),
+      .references(() => user.id, { onDelete: "cascade" }),
+    invitedBy: text("invited_by")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** The invitee's account type when invited. */
+    role: roleEnum("role").notNull(),
+    status: caseMemberStatusEnum("status").notNull().default("pending"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    respondedAt: timestamp("responded_at", { withTimezone: true }),
   },
-  (t) => [uniqueIndex("filed_baseline_version_uq").on(t.filingId, t.version)],
+  (t) => [
+    uniqueIndex("case_member_case_user_uq").on(t.caseId, t.userId),
+    index("case_member_user_status_idx").on(t.userId, t.status),
+    index("case_member_invited_by_idx").on(t.invitedBy),
+  ],
+);
+
+/* ───────────── Submissions: everything people add to a case ───────────── */
+
+export const submissionSourceEnum = pgEnum("submission_source", ["manual", "upload", "ulip"]);
+
+/**
+ * One document one person added to a case: a typed-in shipping bill, e-way bill or lorry receipt, or an
+ * uploaded invoice, packing list or certificate. A case can hold any number of each type, from anyone
+ * whose account type may add it (see lib/documents). Nothing here is the truth; later checks compare them.
+ * Rows are never edited. Removing one only sets removed_at, so the record trail stays complete.
+ */
+export const caseSubmission = pgTable(
+  "case_submission",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => shipmentCase.id, { onDelete: "cascade" }),
+    /** A key of DOC_TYPES. */
+    type: text("type").notNull(),
+    addedBy: text("added_by")
+      .notNull()
+      .references(() => user.id),
+    /** The adder's account type when they added it. */
+    addedByRole: roleEnum("added_by_role").notNull(),
+    source: submissionSourceEnum("source").notNull(),
+    documentNumber: text("document_number"),
+    documentDate: date("document_date"),
+    /** Exactly what was received (form fields or API payload). Null for a plain upload. */
+    raw: jsonb("raw"),
+    rawSha256: text("raw_sha256"),
+    /** The standard record built from raw, and where each field came from. Null for a plain upload. */
+    normalized: jsonb("normalized"),
+    provenance: jsonb("provenance").$type<Record<string, string>>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by").references(() => user.id),
+  },
+  (t) => [index("case_submission_case_type_idx").on(t.caseId, t.type), index("case_submission_added_by_idx").on(t.addedBy)],
 );
 
 /* ───────────── Audit ───────────── */

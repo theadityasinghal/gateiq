@@ -6,6 +6,9 @@ import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
+import { PhoneInput } from "@/components/phone-input";
+import { DEFAULT_PHONE_COUNTRY, type PhoneCountry } from "@/lib/phone";
+import { USERNAME_MAX, validateUsername } from "@/lib/username";
 
 /** Only same-site relative paths are accepted as a post-login destination. */
 function safeNext(next: string | null): string {
@@ -14,7 +17,7 @@ function safeNext(next: string | null): string {
 
 type Mode = "sign-in" | "sign-up";
 
-export function AuthForm() {
+export function AuthForm({ countries }: { countries: PhoneCountry[] }) {
   const params = useSearchParams();
   const router = useRouter();
   const [mode, setMode] = useState<Mode>(params.get("mode") === "sign-up" ? "sign-up" : "sign-in");
@@ -27,9 +30,14 @@ export function AuthForm() {
     const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "");
     const name = String(form.get("name") ?? "").trim();
+    const phone = String(form.get("phone") ?? "").trim();
+    const phoneCountry = String(form.get("phoneCountry") ?? "");
+    const handle = validateUsername(form.get("username"));
 
     if (mode === "sign-up") {
       if (name.length < 2) return setError("Enter your name.");
+      if (!handle.ok) return setError(handle.message);
+      if (phone.replace(/\D/g, "").length < 4) return setError("Enter your mobile number.");
       if (password.length < 8) return setError("Use at least 8 characters for your password.");
       if (password !== form.get("confirm")) return setError("The two passwords don't match.");
     }
@@ -38,7 +46,7 @@ export function AuthForm() {
     setError(null);
     const res =
       mode === "sign-up"
-        ? await authClient.signUp.email({ name, email, password })
+        ? await authClient.signUp.email({ name, email, password, phone, phoneCountry, username: handle.ok ? handle.username : "" })
         : await authClient.signIn.email({ email, password });
     if (res.error) {
       setPending(false);
@@ -91,9 +99,28 @@ export function AuthForm() {
             <Input id="name" name="name" autoComplete="name" required />
           </Field>
         ) : null}
+        {mode === "sign-up" ? (
+          <Field label="Username" htmlFor="username" hint="Others use this to add you to cases. It can't be changed later.">
+            <Input
+              id="username"
+              name="username"
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              maxLength={USERNAME_MAX + 1}
+              placeholder="e.g. priya.exports"
+              required
+            />
+          </Field>
+        ) : null}
         <Field label="Email" htmlFor="email">
           <Input id="email" name="email" type="email" autoComplete="email" inputMode="email" required />
         </Field>
+        {mode === "sign-up" ? (
+          <Field label="Mobile number" htmlFor="phone" hint="Choose the country code, then type the number.">
+            <PhoneInput countries={countries} defaultCountry={DEFAULT_PHONE_COUNTRY} />
+          </Field>
+        ) : null}
         <Field label="Password" htmlFor="password" hint={mode === "sign-up" ? "At least 8 characters." : undefined}>
           <Input
             id="password"

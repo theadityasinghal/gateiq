@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { Field, Input, Select } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { Card, SectionTitle } from "@/components/ui/card";
 import { createCase, type CaseFormState } from "@/server/cases/actions";
@@ -50,9 +50,6 @@ export function CaseForm({
   const defaultMass = massUnits.find((u) => u.code === "KGS")?.code ?? massUnits[0]?.code ?? "";
 
   const [f, setF] = useState({
-    consigneeName: "",
-    consigneeAddress: "",
-    consigneeCountry: "",
     originPlace: "",
     exportPortCode: "",
     destinationCountry: "",
@@ -83,24 +80,6 @@ export function CaseForm({
   return (
     <form action={action} className="mt-8 space-y-6" noValidate>
       <input type="hidden" name="payload" value={payload} />
-
-      <Card>
-        <SectionTitle title="Consignee" description="Who receives the goods." />
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Consignee name" htmlFor="consigneeName" error={err("consigneeName")} className="sm:col-span-2">
-            <Input id="consigneeName" value={f.consigneeName} onChange={set("consigneeName")} autoComplete="off" />
-          </Field>
-          <Field label="Address" htmlFor="consigneeAddress" error={err("consigneeAddress")} className="sm:col-span-2">
-            <Textarea id="consigneeAddress" value={f.consigneeAddress} onChange={set("consigneeAddress")} />
-          </Field>
-          <Field label="Country" htmlFor="consigneeCountry" error={err("consigneeCountry")}>
-            <Select id="consigneeCountry" value={f.consigneeCountry} onChange={set("consigneeCountry")}>
-              <option value="">Select…</option>
-              {countries.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
-            </Select>
-          </Field>
-        </div>
-      </Card>
 
       <Card>
         <SectionTitle title="Route and terms" />

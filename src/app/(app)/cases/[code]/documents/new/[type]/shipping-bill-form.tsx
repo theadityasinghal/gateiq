@@ -4,47 +4,40 @@ import { useActionState, useState } from "react";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { Card, SectionTitle } from "@/components/ui/card";
-import { recordShippingBill, type CaseFormState } from "@/server/cases/actions";
-import type { NormalizedShippingBill } from "@/lib/normalize/shipping-bill";
+import { addShippingBill, type SubmissionFormState } from "@/server/cases/submissions";
+import { AttachFile } from "./attach-file";
 
 type Option = { code: string; name: string };
 type Line = { description: string; hsCode: string; quantity: string; uqc: string; value: string };
 const emptyLine = (): Line => ({ description: "", hsCode: "", quantity: "", uqc: "", value: "" });
 
-export function FilingForm({
+export function ShippingBillForm({
   caseCode,
   currencies,
   units,
   massUnits,
-  previous,
 }: {
   caseCode: string;
   currencies: Option[];
   units: Option[];
   massUnits: Option[];
-  /** When revising, start from the previous filed version (never from the declared case). */
-  previous: NormalizedShippingBill | null;
 }) {
-  const [state, action, pending] = useActionState<CaseFormState, FormData>(recordShippingBill.bind(null, caseCode), {});
-  const massDefault = previous ? "MTS" : (massUnits.find((u) => u.code === "KGS")?.code ?? "");
+  const [state, action, pending] = useActionState<SubmissionFormState, FormData>(addShippingBill.bind(null, caseCode), {});
+  const massDefault = massUnits.find((u) => u.code === "KGS")?.code ?? "";
   const [f, setF] = useState({
-    sbNumber: previous?.documentNumber ?? "",
-    sbDate: previous?.documentDate ?? "",
-    portCode: previous?.portCode ?? "",
-    exporterIec: previous?.exporter.iec ?? "",
-    exporterGstin: previous?.exporter.gstin ?? "",
-    consigneeName: previous?.consigneeName ?? "",
-    currency: previous?.currency ?? "",
-    totalPackages: previous ? String(previous.totals.packages) : "",
-    grossWeight: previous ? String(previous.totals.grossWeightT) : "",
-    netWeight: previous ? String(previous.totals.netWeightT) : "",
+    sbNumber: "",
+    sbDate: "",
+    portCode: "",
+    exporterIec: "",
+    exporterGstin: "",
+    consigneeName: "",
+    currency: "",
+    totalPackages: "",
+    grossWeight: "",
+    netWeight: "",
     weightUnit: massDefault,
   });
-  const [lines, setLines] = useState<Line[]>(
-    previous
-      ? previous.lines.map((l) => ({ description: l.description, hsCode: l.hsCode, quantity: String(l.quantity), uqc: l.uqc, value: String(l.value) }))
-      : [emptyLine()],
-  );
+  const [lines, setLines] = useState<Line[]>([emptyLine()]);
   const err = (k: string) => state.fieldErrors?.[k];
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((p) => ({ ...p, [k]: e.target.value }));
   const setLine = (i: number, k: keyof Line, v: string) => setLines((ls) => ls.map((l, j) => (j === i ? { ...l, [k]: v } : l)));
@@ -148,11 +141,13 @@ export function FilingForm({
         </Button>
       </Card>
 
+      <AttachFile error={err("file")} />
+
       {state.error || state.fieldErrors ? (
         <p role="alert" className="text-body-sm text-error">{state.error ?? "Some fields need attention. They are marked above."}</p>
       ) : null}
       <div className="flex justify-end">
-        <Button type="submit" disabled={pending}>{pending ? "Saving baseline…" : "Save as Filed baseline"}</Button>
+        <Button type="submit" disabled={pending}>{pending ? "Adding…" : "Add shipping bill"}</Button>
       </div>
     </form>
   );

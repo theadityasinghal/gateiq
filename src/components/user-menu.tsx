@@ -10,7 +10,10 @@ export async function UserMenu() {
     <div className="flex items-center gap-3">
       <div className="hidden text-right sm:block">
         <p className="text-[14px] font-medium leading-tight text-ink">{user.name}</p>
-        <p className="text-caption text-steel">{user.role ? ROLE_INFO[user.role].label : "No role yet"}</p>
+        <p className="text-caption text-steel">
+          {user.username ? `@${user.username} · ` : ""}
+          {user.role ? ROLE_INFO[user.role].label : "No role yet"}
+        </p>
       </div>
       {user.image ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -21,7 +24,7 @@ export async function UserMenu() {
         </span>
       )}
       {user.hasProfile ? (
-        <Link href="/onboarding/profile" className="hidden text-[14px] font-medium text-link-blue sm:inline">
+        <Link href="/profile" className="hidden text-[14px] font-medium text-link-blue sm:inline">
           Profile
         </Link>
       ) : null}

@@ -1,7 +1,9 @@
 import type { FilingSource, ReceivedFiling } from "./source";
-import type { ShippingBillFormInput } from "@/lib/case-schema";
+import type { EwayBillFormInput, LorryReceiptFormInput, ShippingBillFormInput } from "@/lib/case-schema";
+import type { EwayBillInput } from "@/lib/normalize/eway-bill";
+import type { LorryReceiptInput } from "@/lib/normalize/lorry-receipt";
 
-/** The consignor types the shipping bill from their ICEGATE filing. Nothing here is independently verified. */
+/** The consignor or CHA types the shipping bill from the ICEGATE filing. Nothing here is independently verified. */
 export class ManualFilingSource implements FilingSource<ShippingBillFormInput> {
   readonly id = "manual" as const;
 
@@ -25,5 +27,23 @@ export class ManualFilingSource implements FilingSource<ShippingBillFormInput> {
         lines: form.lines,
       },
     };
+  }
+}
+
+/** Whoever generated the e-way bill types it from the GST portal. Nothing here is independently verified. */
+export class ManualEwayBillSource implements FilingSource<EwayBillFormInput, EwayBillInput> {
+  readonly id = "manual" as const;
+
+  async receive(form: EwayBillFormInput): Promise<ReceivedFiling<EwayBillInput>> {
+    return { source: "manual", verification: "self_declared", raw: { enteredAs: "form", form }, input: form };
+  }
+}
+
+/** The transporter types the lorry receipt they issued. Nothing here is independently verified. */
+export class ManualLorryReceiptSource implements FilingSource<LorryReceiptFormInput, LorryReceiptInput> {
+  readonly id = "manual" as const;
+
+  async receive(form: LorryReceiptFormInput): Promise<ReceivedFiling<LorryReceiptInput>> {
+    return { source: "manual", verification: "self_declared", raw: { enteredAs: "form", form }, input: form };
   }
 }

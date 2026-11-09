@@ -5,8 +5,9 @@ GateIQ checks what was **filed** for a consignment (the shipping bill on ICEGATE
 This phase covers:
 
 - **Email + password sign-in.** Users and password hashes are stored in our own Postgres. Emails are trusted as typed (no verification link or OTP), so they show as *self-declared*.
-- **Choosing one of 10 account types**, then a role-specific profile. Each identity field shows a verification badge: *owned*, *exists*, *format valid*, *self-declared* or *invalid*.
-- **Case creation by the consignor:** consignee, route, goods lines, and special cargo (hazmat with MSDS, pharma temperature range, perishable certificates). Each case gets a Case ID like `GIQ-26-7K3M9Q2X`, with a check character that catches typos.
+- **A permanent username** chosen at sign-up, then **one of 11 account types**, then a role-specific profile. Each identity field shows a verification badge: *owned*, *exists*, *format valid*, *self-declared* or *invalid*.
+- **Case creation by the consignor:** route, goods lines, and special cargo (hazmat with MSDS, pharma temperature range, perishable certificates). Each case gets a Case ID like `GIQ-26-7K3M9Q2X`, with a check character that catches typos.
+- **Inviting people to a case by username.** Each account type can invite only the next ones down the line: consignor → consignee, CHA, transporter; CHA → transporter; transporter → driver. Officials are never invited. Invites show on the invitee's dashboard; once accepted they can view the case. The owner or the inviter can remove someone, which also removes everyone that person invited. A case has at most one consignee, whose company name is compared with the shipping bill.
 - **Recording the shipping bill** as the *Filed baseline*. The raw entry is kept append-only and hashed, normalised (units to tonnes, dates, names, HS codes), versioned, and compared line by line with the declared case.
 
 ULIP (direct ICEGATE / e-way bill lookups) is not connected yet. Every filing goes through the `FilingSource` interface (`src/server/filings/`), so a `UlipFilingSource` can be added later without touching the rest of the pipeline.

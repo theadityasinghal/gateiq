@@ -29,9 +29,6 @@ export const goodsLineSchema = z
 
 export const caseSchema = z
   .object({
-    consigneeName: text("Consignee name", 200),
-    consigneeAddress: text("Consignee address", 500),
-    consigneeCountry: z.string().trim().length(2, "Choose a country."),
     originPlace: text("Origin", 200),
     exportPortCode: z
       .string()
@@ -86,6 +83,76 @@ export const shippingBillSchema = z
   .refine((s) => s.sbDate <= new Date().toISOString().slice(0, 10), { message: "The date can't be in the future.", path: ["sbDate"] });
 
 export type ShippingBillFormInput = z.infer<typeof shippingBillSchema>;
+
+export const EWB_DOC_TYPES = ["INV", "BIL", "CHL", "OTH"] as const;
+export const EWB_DOC_TYPE_LABEL: Record<(typeof EWB_DOC_TYPES)[number], string> = {
+  INV: "Tax invoice",
+  BIL: "Bill of supply",
+  CHL: "Delivery challan",
+  OTH: "Others",
+};
+export const EWB_TRANSPORT_MODES = ["ROAD", "RAIL", "AIR", "SHIP"] as const;
+export const GSTIN_RE = /^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+/** Indian registration plates, after stripping spaces and hyphens: KA01AB1234, DL1CAB1234, 22BH1234AA. */
+export const VEHICLE_RE = /^([A-Z]{2}\d{1,2}[A-Z]{0,3}\d{4}|\d{2}BH\d{4}[A-Z]{1,2})$/;
+const isoDate = (msg: string) => z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, msg);
+const compact = (v: string) => v.toUpperCase().replace(/[\s-]/g, "");
+
+export const ewayLineSchema = z.object({
+  description: text("Product name", 500),
+  hsCode: z.string().trim().regex(/^\d{4,8}$/, "HSN on the e-way bill is 4 to 8 digits."),
+  quantity: positive("Quantity"),
+  uqc: text("Unit"),
+  value: nonNegative("Taxable value"),
+});
+
+export const ewayBillSchema = z
+  .object({
+    ewbNumber: z.string().trim().transform((v) => v.replace(/\s/g, "")).pipe(z.string().regex(/^\d{12}$/, "The e-way bill number is 12 digits.")),
+    ewbDate: isoDate("Choose the date the e-way bill was generated."),
+    validUntil: z.string().trim().optional().transform((v) => v || null)
+      .pipe(isoDate("Choose a valid date.").nullable()),
+    fromGstin: z.string().trim().transform(compact).pipe(z.string().regex(GSTIN_RE, "Enter the 15-character GSTIN of the supplier.")),
+    toGstin: z.string().trim().transform(compact)
+      .pipe(z.string().refine((v) => v === "URP" || GSTIN_RE.test(v), "Enter a 15-character GSTIN, or URP for an unregistered or overseas recipient.")),
+    fromPincode: z.string().trim().regex(/^[1-9]\d{5}$/, "PIN code is 6 digits."),
+    toPincode: z.string().trim().regex(/^[1-9]\d{5}$/, "PIN code is 6 digits."),
+    docType: z.enum(EWB_DOC_TYPES, { error: "Choose the document type." }),
+    docNumber: text("Document number", 16),
+    docDate: isoDate("Choose the document date."),
+    transportMode: z.enum(EWB_TRANSPORT_MODES, { error: "Choose the transport mode." }),
+    distanceKm: z.coerce.number({ error: "Distance must be a number." }).int("Distance is in whole kilometres.").min(0).max(4000, "Distance can't be more than 4000 km."),
+    transporterId: z.string().trim().transform(compact).optional().transform((v) => v || null)
+      .pipe(z.string().regex(GSTIN_RE, "Transporter ID is a 15-character GSTIN or TRANSIN.").nullable()),
+    vehicleNumber: z.string().trim().transform(compact).optional().transform((v) => v || null)
+      .pipe(z.string().regex(VEHICLE_RE, "Use the registration as printed, e.g. MH04AB1234.").nullable()),
+    lines: z.array(ewayLineSchema).min(1, "Add at least one item line.").max(200),
+  })
+  .refine((s) => s.ewbDate <= new Date().toISOString().slice(0, 10), { message: "The date can't be in the future.", path: ["ewbDate"] })
+  .refine((s) => s.docDate <= s.ewbDate, { message: "The document date can't be after the e-way bill date.", path: ["docDate"] })
+  .refine((s) => !s.validUntil || s.validUntil >= s.ewbDate, { message: "Valid until can't be before the e-way bill date.", path: ["validUntil"] });
+
+export type EwayBillFormInput = z.infer<typeof ewayBillSchema>;
+
+export const lorryReceiptSchema = z
+  .object({
+    lrNumber: z.string().trim().toUpperCase().min(1, "Enter the LR number.").max(30, "LR number is at most 30 characters."),
+    lrDate: isoDate("Choose the LR date."),
+    vehicleNumber: z.string().trim().transform(compact).pipe(z.string().regex(VEHICLE_RE, "Use the registration as printed, e.g. MH04AB1234.")),
+    driverName: z.string().trim().max(120).optional().transform((v) => v || null),
+    /** E.164 after parsing on the server; blank when not known. */
+    driverPhone: z.string().trim().max(20).optional().transform((v) => v || null),
+    driverPhoneCountry: z.string().trim().optional().transform((v) => v || "IN"),
+    fromPlace: text("From", 120),
+    toPlace: text("To", 120),
+    packages: z.coerce.number().int("Packages must be a whole number.").positive("Packages must be at least 1."),
+    goodsDescription: text("Description of goods", 300),
+    chargedWeight: positive("Charged weight"),
+    weightUnit: z.enum(["KGS", "MTS"], { error: "Choose kg or tonnes." }),
+  })
+  .refine((s) => s.lrDate <= new Date().toISOString().slice(0, 10), { message: "The date can't be in the future.", path: ["lrDate"] });
+
+export type LorryReceiptFormInput = z.infer<typeof lorryReceiptSchema>;
 
 /** Flattens zod issues into "a.b.0.c" → message, for showing next to fields. */
 export function issuesToFieldErrors(issues: z.core.$ZodIssue[]): Record<string, string> {

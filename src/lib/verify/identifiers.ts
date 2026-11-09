@@ -1,3 +1,4 @@
+import { parsePhone } from "@/lib/phone";
 import { GST_STATE_CODES } from "./gst-state-codes";
 import type { VerificationResult } from "./types";
 
@@ -5,7 +6,6 @@ const GSTIN_CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const GSTIN_RE = /^[0-9]{2}[A-Z]{3}[ABCFGHLJPTK][A-Z][0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
 const PAN_RE = /^[A-Z]{3}[ABCFGHLJPTK][A-Z][0-9]{4}[A-Z]$/;
 const LEGACY_IEC_RE = /^[0-9]{10}$/;
-const PHONE_RE = /^(?:\+91|91|0)?([6-9][0-9]{9})$/;
 const DL_RE = /^([A-Z]{2})([0-9]{2})((?:19|20)[0-9]{2})([0-9]{7})$/;
 
 const PAN_HOLDER_TYPES: Record<string, string> = {
@@ -115,25 +115,19 @@ export function verifyIec(raw: string, gstinRaw?: string | null): VerificationRe
   };
 }
 
-export function verifyPhone(raw: string): VerificationResult {
-  const m = raw.replace(/[\s()-]/g, "").match(PHONE_RE);
-  if (!m) {
-    return {
-      field: "phone",
-      value: raw,
-      level: "invalid",
-      verifier: "phone-format@1",
-      message: "Enter a 10-digit Indian mobile number.",
-      evidence: {},
-    };
+/** Any country: the number must be valid for its calling code. Stored in E.164. */
+export function verifyPhone(country: string, raw: string): VerificationResult {
+  const r = parsePhone(country, raw);
+  if (!r.ok) {
+    return { field: "phone", value: raw, level: "invalid", verifier: "phone-format@2", message: r.message, evidence: {} };
   }
   return {
     field: "phone",
-    value: `+91${m[1]}`,
+    value: r.e164,
     level: "format_valid",
-    verifier: "phone-format@1",
-    message: "Valid mobile format. Not yet confirmed by OTP.",
-    evidence: {},
+    verifier: "phone-format@2",
+    message: "Valid number for its country. Not yet confirmed by OTP.",
+    evidence: { country: r.country },
   };
 }
 

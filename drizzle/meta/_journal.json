@@ -8,6 +8,41 @@
       "when": 1793901695331,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793944027642,
+      "tag": "0001_user_phone_rate_limit",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793986656985,
+      "tag": "0002_usernames_case_members",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793987699862,
+      "tag": "0003_consignee_accounts",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794074049178,
+      "tag": "0004_eway_bill",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794074877720,
+      "tag": "0005_case_submissions",
+      "breakpoints": true
     }
   ]
 }

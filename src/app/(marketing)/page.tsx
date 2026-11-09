@@ -9,7 +9,7 @@ const stages: Array<{ n: string; title: string; body: string; tint: Tint }> = [
   {
     n: "01",
     title: "Create the case",
-    body: "The consignor records the goods, quantities, weights and value, and gets a Case ID to share with the consignee.",
+    body: "The consignor records the goods, quantities, weights and value, and gets a Case ID. They invite the consignee, CHA and transporter to the case by username.",
     tint: "lavender",
   },
   {
@@ -20,8 +20,8 @@ const stages: Array<{ n: string; title: string; body: string; tint: Tint }> = [
   },
   {
     n: "03",
-    title: "See every disagreement",
-    body: "Declared and filed values are compared line by line. GateIQ never corrects either side. It only shows where they differ.",
+    title: "Ready for the gate",
+    body: "The shipping bill and e-way bill become the Filed baseline that the papers and the truck are checked against at the gate. GateIQ never corrects it.",
     tint: "mint",
   },
 ];

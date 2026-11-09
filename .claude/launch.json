@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "gateiq-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "gateiq-dev-nodb",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "SUPABASE_DB=postgres://u:p@127.0.0.1:1/db",
+        "BETTER_AUTH_SECRET=local-preview-only-7f3c9a1e5b2d8c4f6a0e9b7d",
+        "BETTER_AUTH_URL=http://localhost:3100",
+        "npx",
+        "next",
+        "dev",
+        "-p",
+        "3100"
+      ],
+      "port": 3100
+    }
+  ]
+}

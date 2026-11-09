@@ -22,7 +22,8 @@ export default async function NewCasePage() {
       <p className="text-micro-upper text-steel">New case</p>
       <h1 className="mt-2 text-[32px] font-semibold leading-[1.2] tracking-[-0.5px] sm:text-h2">Describe the consignment</h1>
       <p className="mt-2 max-w-[640px] text-slate">
-        Record what you are sending. Once you file the shipping bill on ICEGATE, you&apos;ll attach it to this case and GateIQ will compare the two.
+        Record what you are sending. After you create the case, invite your consignee, CHA and transporter to it by username. Once you file
+        the shipping bill on ICEGATE, you&apos;ll attach it to this case and GateIQ will compare the two.
       </p>
       <MastersNotice status={status} />
       <CaseForm

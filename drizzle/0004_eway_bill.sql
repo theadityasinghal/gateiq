@@ -1,0 +1,1 @@
+ALTER TABLE "filing" ALTER COLUMN "port_code" DROP NOT NULL;

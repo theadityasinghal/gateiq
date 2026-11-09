@@ -7,6 +7,8 @@ export const metadata = { title: "Choose your account type" };
 export default async function OnboardingPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/sign-in");
+  // After onboarding, account type changes happen on /profile, where the data loss is spelled out.
+  if (user.hasProfile) redirect("/profile");
   return (
     <div className="mx-auto max-w-[1040px]">
       <p className="text-micro-upper text-steel">Step 1 of 2</p>

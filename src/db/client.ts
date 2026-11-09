@@ -107,5 +107,9 @@ export function createSql(url = databaseUrl(), opts: { max?: number } = {}): Sql
     idle_timeout: 300,
     max_lifetime: 60 * 30,
     max: opts.max ?? 5,
+    // One query per connection at a time. With more queries in flight than connections, postgres.js
+    // otherwise pipelines them on one connection, and Supabase's transaction pooler (port 6543)
+    // stalls on that: the page hangs until something times out. Extra queries now wait for a free connection.
+    max_pipeline: 1,
   });
 }

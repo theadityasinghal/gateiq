@@ -45,9 +45,14 @@ describe("IEC", () => {
 });
 
 describe("phone, licence, email", () => {
-  it("normalises Indian mobile numbers", () => {
-    expect(verifyPhone("+91 98765 43210").value).toBe("+919876543210");
-    expect(verifyPhone("12345").level).toBe("invalid");
+  it("normalises mobile numbers for the chosen country", () => {
+    expect(verifyPhone("IN", "+91 98765 43210").value).toBe("+919876543210");
+    expect(verifyPhone("IN", "98765 43210").value).toBe("+919876543210");
+    expect(verifyPhone("IN", "12345").level).toBe("invalid");
+    expect(verifyPhone("GB", "07400 123456").value).toBe("+447400123456");
+    // A number with a different country's code is rejected.
+    expect(verifyPhone("IN", "+44 7400 123456").level).toBe("invalid");
+    expect(verifyPhone("XX", "9876543210").level).toBe("invalid");
   });
   it("recognises the national DL format but never blocks other formats", () => {
     expect(verifyDrivingLicence("MH14 20110062821").level).toBe("format_valid");

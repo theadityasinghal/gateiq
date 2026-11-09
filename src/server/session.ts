@@ -15,6 +15,9 @@ export type CurrentUser = {
   emailVerified: boolean;
   image: string | null;
   role: Role | null;
+  username: string | null;
+  phone: string | null;
+  phoneCountry: string | null;
   hasProfile: boolean;
 };
 
@@ -30,6 +33,9 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       emailVerified: user.emailVerified,
       image: user.image,
       role: user.role,
+      username: user.username,
+      phone: user.phone,
+      phoneCountry: user.phoneCountry,
       profileUserId: profile.userId,
     })
     .from(user)
@@ -40,13 +46,17 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   return { ...rest, hasProfile: !!profileUserId };
 });
 
-/** Signed in, with a role and a profile; otherwise send the user to the step they are missing. */
-export async function requireOnboardedUser(): Promise<CurrentUser & { role: Role }> {
+export type OnboardedUser = CurrentUser & { role: Role; username: string };
+
+/** Signed in, with a role, a profile and a username; otherwise send the user to the step they are missing. */
+export async function requireOnboardedUser(): Promise<OnboardedUser> {
   const u = await getCurrentUser();
   if (!u) redirect("/sign-in");
   if (!u.role) redirect("/onboarding");
   if (!u.hasProfile) redirect("/onboarding/profile");
-  return u as CurrentUser & { role: Role };
+  // Accounts made before usernames existed pick one once.
+  if (!u.username) redirect("/onboarding/username");
+  return u as OnboardedUser;
 }
 
 export async function requireUser(): Promise<CurrentUser> {
