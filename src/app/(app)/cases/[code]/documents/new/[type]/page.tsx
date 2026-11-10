@@ -8,9 +8,8 @@ import { DOC_TYPES, canAddDocument, docLabelInline, docTypeFromSlug } from "@/li
 import { ROLE_INFO } from "@/lib/roles";
 import { listPhoneCountries } from "@/lib/phone";
 import { ButtonLink } from "@/components/ui/button";
-import { ShippingBillForm } from "./shipping-bill-form";
-import { EwayBillForm } from "./eway-bill-form";
-import { LorryReceiptForm } from "./lorry-receipt-form";
+import { DOC_FORMS, type OptionSource, type StaticOption } from "@/lib/doc-forms";
+import { StructuredDocForm } from "./structured-doc-form";
 import { FileDocumentForm } from "./file-document-form";
 
 type Props = { params: Promise<{ code: string; type: string }> };
@@ -26,7 +25,25 @@ const INTRO: Partial<Record<keyof typeof DOC_TYPES, string>> = {
   eway_bill:
     "Type the details exactly as they appear on the e-way bill from the GST portal. The vehicle number (Part B) is optional; if it changes, add the updated e-way bill as another entry.",
   lorry_receipt: "Type the details from the lorry receipt you issued for this consignment. The vehicle number is checked against the e-way bill and the truck at the gate.",
+  form_13: "Type the e-Form-13 the shipping line issued for one container. Its container, seal and VGM are checked against the shipping bill, e-seal record and VGM declaration.",
+  vgm_declaration: "Type the VGM declaration given to the shipping line. Each container's VGM, less its tare, is compared with the shipping bill's gross weight.",
+  e_seal: "Type what was uploaded through the e-seal vendor's app. The seal ties the container number to the shipping bill and the truck.",
+  commercial_invoice: "Type the invoice as printed. Its number, date, GSTIN and HS codes are compared with the shipping bill and e-way bill.",
+  packing_list: "Type the totals from the packing list. Packages and weight are compared with the shipping bill and lorry receipt.",
 };
+
+/** Codes used in currencies are loaded from the masters; masters that aren't imported give empty lists. */
+async function loadOptions(): Promise<Record<OptionSource, StaticOption[]>> {
+  const [currencies, uqc, massUnits] = await Promise.all([getCurrencies(), getUqcUnits(), getMassUnits()]);
+  return {
+    currencies: currencies.map((x) => ({ value: x.code, label: `${x.code} · ${x.name}` })),
+    uqc: uqc.map((u) => ({ value: u.code, label: `${u.code} · ${u.description}` })),
+    massUnits: massUnits.map((u) => ({ value: u.code, label: `${u.code} · ${u.description}` })),
+    phoneCountries: listPhoneCountries().map((c) => ({ value: c.code, label: `${c.code} +${c.dial}  ${c.name}` })),
+  };
+}
+
+const USES_MASTERS = new Set(["shipping_bill", "eway_bill", "commercial_invoice"]);
 
 export default async function AddDocumentPage({ params }: Props) {
   const { code, type: slug } = await params;
@@ -61,23 +78,10 @@ export default async function AddDocumentPage({ params }: Props) {
 
   let form: React.ReactNode;
   let notice: React.ReactNode = null;
-  if (type === "shipping_bill") {
-    const [currencies, uqc, massUnits, status] = await Promise.all([getCurrencies(), getUqcUnits(), getMassUnits(), masterStatus()]);
-    notice = <MastersNotice status={status} />;
-    form = (
-      <ShippingBillForm
-        caseCode={c.caseCode}
-        currencies={currencies.map((x) => ({ code: x.code, name: x.name }))}
-        units={uqc.map((u) => ({ code: u.code, name: u.description }))}
-        massUnits={massUnits.map((u) => ({ code: u.code, name: u.description }))}
-      />
-    );
-  } else if (type === "eway_bill") {
-    const [uqc, status] = await Promise.all([getUqcUnits(), masterStatus()]);
-    notice = <MastersNotice status={status} />;
-    form = <EwayBillForm caseCode={c.caseCode} units={uqc.map((u) => ({ code: u.code, name: u.description }))} />;
-  } else if (type === "lorry_receipt") {
-    form = <LorryReceiptForm caseCode={c.caseCode} countries={listPhoneCountries()} />;
+  if (DOC_FORMS[type]) {
+    const [options, status] = await Promise.all([loadOptions(), masterStatus()]);
+    if (USES_MASTERS.has(type)) notice = <MastersNotice status={status} />;
+    form = <StructuredDocForm caseCode={c.caseCode} type={type} options={options} />;
   } else {
     form = <FileDocumentForm caseCode={c.caseCode} type={type} label={info.label} inlineLabel={docLabelInline(type)} />;
   }

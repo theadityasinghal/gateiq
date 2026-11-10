@@ -2,7 +2,7 @@
  * Normaliser for the lorry receipt (LR) the transporter issues. One standard record with provenance,
  * like the shipping bill and e-way bill, so the vehicle and weight can be compared with them later.
  */
-import { round, toIsoDate } from "./shipping-bill";
+import { alnum, round, toIsoDate } from "./shipping-bill";
 import { normalizeVehicleNumber } from "./eway-bill";
 
 export type LorryReceiptInput = {
@@ -18,6 +18,7 @@ export type LorryReceiptInput = {
   goodsDescription: string;
   chargedWeight: number;
   weightUnit: "KGS" | "MTS";
+  containers?: Array<{ containerNo: string }>;
 };
 
 export type NormalizedLorryReceipt = {
@@ -29,6 +30,8 @@ export type NormalizedLorryReceipt = {
   packages: number;
   goodsDescription: string;
   chargedWeightT: number;
+  /** Missing on receipts recorded before containers were captured; read it as []. */
+  containerNumbers?: string[];
 };
 
 const tidy = (v: string) => v.trim().replace(/\s+/g, " ");
@@ -53,6 +56,7 @@ export function normalizeLorryReceipt(input: LorryReceiptInput): { normalized: N
     packages: input.packages,
     goodsDescription: tidy(input.goodsDescription),
     chargedWeightT: round(input.weightUnit === "KGS" ? input.chargedWeight / 1000 : input.chargedWeight, 3),
+    containerNumbers: (input.containers ?? []).map((c) => alnum(c.containerNo)),
   };
   return { normalized, provenance };
 }

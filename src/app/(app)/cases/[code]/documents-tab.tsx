@@ -6,6 +6,9 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import type { NormalizedShippingBill } from "@/lib/normalize/shipping-bill";
 import type { NormalizedEwayBill } from "@/lib/normalize/eway-bill";
 import type { NormalizedLorryReceipt } from "@/lib/normalize/lorry-receipt";
+import type { NormalizedESeal, NormalizedForm13, NormalizedVgm } from "@/lib/normalize/port-docs";
+import type { NormalizedInvoice, NormalizedPackingList } from "@/lib/normalize/commercial-docs";
+import { formatContainerNo, isValidContainerNo } from "@/lib/iso6346";
 import { Card } from "@/components/ui/card";
 import { Tag } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -174,6 +177,12 @@ function StructuredDetails({ s }: { s: Submission }) {
           heads={["#", "Description", "HS code", "Quantity", `FOB (${n.currency})`]}
           rows={n.lines.map((l) => [l.lineNo, l.description, <span key="hs" className="font-mono">{l.hsCode}</span>, `${l.quantity} ${l.uqc}`, l.value.toFixed(2)])}
         />
+        {n.containers?.length ? (
+          <LinesTable
+            heads={["Container", "Size/type", "Seal"]}
+            rows={n.containers.map((k) => [<ContainerNo key="c" n={k.number} />, k.sizeType ?? "—", <span key="s" className="font-mono">{k.sealNo ?? "—"}</span>])}
+          />
+        ) : null}
       </>
     );
   }
@@ -210,8 +219,95 @@ function StructuredDetails({ s }: { s: Submission }) {
         <Detail label="Goods">{n.goodsDescription}</Detail>
         <Detail label="Packages">{n.packages}</Detail>
         <Detail label="Charged weight">{n.chargedWeightT.toFixed(3)} t</Detail>
+        {n.containerNumbers?.length ? <Detail label="Containers"><Containers list={n.containerNumbers} /></Detail> : null}
+      </dl>
+    );
+  }
+  if (s.type === "form_13") {
+    const n = s.normalized as NormalizedForm13;
+    return (
+      <dl className="grid gap-4 sm:grid-cols-3">
+        <Detail label="Container"><ContainerNo n={n.container.number} />{n.container.isoCode ? <span className="text-steel"> · {n.container.isoCode}</span> : null}</Detail>
+        <Detail label="Line seal · e-seal"><span className="font-mono">{n.container.lineSeal ?? "—"} · {n.container.eSeal ?? "—"}</span></Detail>
+        <Detail label="VGM">{n.vgmT.toFixed(3)} t</Detail>
+        <Detail label="Shipping bill">{n.sbNumber ? <span className="font-mono">{n.sbNumber}</span> : "Not given"}</Detail>
+        <Detail label="Shipper">{n.shipperName ?? "Not given"}</Detail>
+        <Detail label="Port of discharge · vessel"><span className="font-mono">{n.pod ?? "—"} · {n.vesselCall ?? "—"}</span></Detail>
+        {n.vehicleNumber ? <Detail label="Vehicle"><span className="font-mono">{n.vehicleNumber}</span></Detail> : null}
+      </dl>
+    );
+  }
+  if (s.type === "vgm_declaration") {
+    const n = s.normalized as NormalizedVgm;
+    return (
+      <>
+        <dl className="grid gap-4 sm:grid-cols-3">
+          <Detail label="Booking"><span className="font-mono">{n.bookingNo}</span></Detail>
+          <Detail label="Shipper">{n.shipperName}{n.shipperIec ? <span className="font-mono text-steel"> · {n.shipperIec}</span> : null}</Detail>
+          <Detail label="Method · weighbridge">Method {n.method}{n.weighbridgeRegNo ? <span className="font-mono text-steel"> · {n.weighbridgeRegNo}</span> : null}</Detail>
+        </dl>
+        <LinesTable
+          heads={["Container", "VGM", "Tare"]}
+          rows={n.containers.map((k) => [<ContainerNo key="c" n={k.number} />, `${k.vgmT.toFixed(3)} t`, k.tareT != null ? `${k.tareT.toFixed(3)} t` : "Not given"])}
+        />
+      </>
+    );
+  }
+  if (s.type === "e_seal") {
+    const n = s.normalized as NormalizedESeal;
+    return (
+      <dl className="grid gap-4 sm:grid-cols-3">
+        <Detail label="Container"><ContainerNo n={n.containerNumber} /></Detail>
+        <Detail label="Shipping bill"><span className="font-mono">{n.sbNumber}</span> · {formatDate(n.sbDate)}</Detail>
+        <Detail label="IEC"><span className="font-mono">{n.iec}</span></Detail>
+        <Detail label="Truck"><span className="font-mono">{n.truckNumber ?? "Not given"}</span></Detail>
+      </dl>
+    );
+  }
+  if (s.type === "commercial_invoice") {
+    const n = s.normalized as NormalizedInvoice;
+    return (
+      <>
+        <dl className="grid gap-4 sm:grid-cols-3">
+          <Detail label="Exporter GSTIN"><span className="font-mono">{n.exporterGstin ?? "Not given"}</span></Detail>
+          <Detail label="Buyer (normalised)">{n.buyerName}{n.destinationCountry ? <span className="text-steel"> · {n.destinationCountry}</span> : null}</Detail>
+          <Detail label="Total">{n.totals.value.toFixed(2)} {n.currency}</Detail>
+          {n.irn ? <Detail label="IRN"><span className="break-all font-mono text-caption">{n.irn}</span></Detail> : null}
+        </dl>
+        <LinesTable
+          heads={["#", "Description", "HSN", "Quantity", `Value (${n.currency})`]}
+          rows={n.lines.map((l) => [l.lineNo, l.description, <span key="hs" className="font-mono">{l.hsCode}</span>, `${l.quantity} ${l.uqc}`, l.value.toFixed(2)])}
+        />
+      </>
+    );
+  }
+  if (s.type === "packing_list") {
+    const n = s.normalized as NormalizedPackingList;
+    return (
+      <dl className="grid gap-4 sm:grid-cols-3">
+        <Detail label="Packages">{n.totals.packages}</Detail>
+        <Detail label="Gross / net weight">{n.totals.grossWeightT.toFixed(3)} t / {n.totals.netWeightT != null ? `${n.totals.netWeightT.toFixed(3)} t` : "—"}</Detail>
+        {n.containerNumbers.length ? <Detail label="Containers"><Containers list={n.containerNumbers} /></Detail> : null}
       </dl>
     );
   }
   return null;
+}
+
+/** A container number as painted on the door, with a warning when its check digit fails. */
+function ContainerNo({ n }: { n: string }) {
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <span className="font-mono">{formatContainerNo(n)}</span>
+      {isValidContainerNo(n) ? null : <Tag tone="red" title="The ISO 6346 check digit doesn't match: the number was probably mistyped">Check digit</Tag>}
+    </span>
+  );
+}
+
+function Containers({ list }: { list: string[] }) {
+  return (
+    <span className="flex flex-col gap-1">
+      {list.map((n) => <ContainerNo key={n} n={n} />)}
+    </span>
+  );
 }

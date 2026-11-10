@@ -25,6 +25,8 @@ export type ShippingBillInput = {
     uqc: string;
     value: number; // FOB, in `currency`
   }>;
+  /** Container block for factory-stuffed cargo; absent on older entries. */
+  containers?: Array<{ containerNo: string; sizeType?: string | null; sealNo?: string | null }>;
 };
 
 export type NormalizedShippingBill = {
@@ -36,6 +38,8 @@ export type NormalizedShippingBill = {
   currency: string;
   totals: { packages: number; grossWeightT: number; netWeightT: number; value: number };
   lines: Array<{ lineNo: number; description: string; hsCode: string; quantity: number; uqc: string; value: number }>;
+  /** Missing on shipping bills recorded before containers were captured; read it as []. */
+  containers?: Array<{ number: string; sizeType: string | null; sealNo: string | null }>;
 };
 
 export class NormalizationError extends Error {}
@@ -44,6 +48,11 @@ export function toTonnes(amount: number, unit: string, factors: UnitFactors): nu
   const factor = factors[unit.toUpperCase()];
   if (factor == null) throw new NormalizationError(`Unit ${unit} is not a mass unit in the UQC master.`);
   return round(amount * factor, 6);
+}
+
+/** Uppercase letters and digits only: "msku 123456-5" → "MSKU1234565". For IDs printed with spacing. */
+export function alnum(input: string): string {
+  return input.toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
 export function round(n: number, dp: number): number {
@@ -150,6 +159,14 @@ export function normalizeShippingBill(
       ),
     },
     lines,
+    containers: (input.containers ?? []).map((c, i) => {
+      provenance[`containers[${i}].number`] = `input.containers[${i}].containerNo (letters and digits only)`;
+      return {
+        number: alnum(c.containerNo),
+        sizeType: c.sizeType ? alnum(c.sizeType) : null,
+        sealNo: c.sealNo ? alnum(c.sealNo) : null,
+      };
+    }),
   };
   return { normalized, provenance };
 }

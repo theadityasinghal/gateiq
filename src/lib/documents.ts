@@ -9,6 +9,9 @@ export const DOC_TYPE_KEYS = [
   "shipping_bill",
   "eway_bill",
   "lorry_receipt",
+  "form_13",
+  "vgm_declaration",
+  "e_seal",
   "commercial_invoice",
   "packing_list",
   "msds",
@@ -19,7 +22,10 @@ export const DOC_TYPE_KEYS = [
 
 export type DocType = (typeof DOC_TYPE_KEYS)[number];
 
-/** "structured": typed in through a form (an optional scan can be attached). "file": an uploaded scan or PDF. */
+/**
+ * "structured": its fields are recorded (typed in, or read from a photo and confirmed) and compared with the
+ * other documents; a scan can be attached. "file": an uploaded scan or PDF only.
+ */
 export type DocForm = "structured" | "file";
 
 export const DOC_TYPES: Record<DocType, { label: string; short: string; form: DocForm; issuers: readonly Role[]; blurb: string }> = {
@@ -44,17 +50,38 @@ export const DOC_TYPES: Record<DocType, { label: string; short: string; form: Do
     issuers: ["transporter"],
     blurb: "Issued by the transporter when the goods are loaded on a truck.",
   },
+  form_13: {
+    label: "Form-13",
+    short: "F13",
+    form: "structured",
+    issuers: ["consignor", "cha", "transporter"],
+    blurb: "The shipping line's permission for one container to enter the terminal (e-Form-13).",
+  },
+  vgm_declaration: {
+    label: "VGM declaration",
+    short: "VGM",
+    form: "structured",
+    issuers: ["consignor", "cha"],
+    blurb: "The weighed gross mass of each packed container, including the container itself, given to the shipping line.",
+  },
+  e_seal: {
+    label: "E-seal record",
+    short: "SEAL",
+    form: "structured",
+    issuers: ["consignor"],
+    blurb: "What was uploaded through the e-seal vendor's app when the container was sealed.",
+  },
   commercial_invoice: {
     label: "Commercial invoice",
     short: "INV",
-    form: "file",
+    form: "structured",
     issuers: ["consignor", "cha"],
     blurb: "The seller's invoice for the goods.",
   },
   packing_list: {
     label: "Packing list",
     short: "PL",
-    form: "file",
+    form: "structured",
     issuers: ["consignor", "cha"],
     blurb: "What is in each package, with weights.",
   },

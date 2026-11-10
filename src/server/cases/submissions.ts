@@ -5,18 +5,12 @@ import { revalidatePath } from "next/cache";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { caseSubmission, shipmentCase } from "@/db/schema";
-import { ewayBillSchema, issuesToFieldErrors, lorryReceiptSchema, shippingBillSchema } from "@/lib/case-schema";
 import { DOC_TYPES, canAddDocument, docLabelInline, isDocType, type DocType } from "@/lib/documents";
-import { NormalizationError, normalizeShippingBill } from "@/lib/normalize/shipping-bill";
-import { normalizeEwayBill } from "@/lib/normalize/eway-bill";
-import { normalizeLorryReceipt } from "@/lib/normalize/lorry-receipt";
-import { parsePhone } from "@/lib/phone";
 import { ROLE_INFO } from "@/lib/roles";
 import { requireOnboardedUser } from "@/server/session";
 import { audit } from "@/server/audit";
-import { getUnitFactors } from "@/server/masters";
-import { ManualEwayBillSource, ManualFilingSource, ManualLorryReceiptSource } from "@/server/filings/manual";
-import { checkAgainstMasters, fileOrNull, parsePayload } from "./form-helpers";
+import { fileOrNull, parsePayload } from "./form-helpers";
+import { DOC_HANDLERS } from "./doc-handlers";
 import { fileProblem, refreshCaseStatus, storeSubmission } from "./submission-store";
 import { getCaseForUser } from "./service";
 
@@ -40,143 +34,59 @@ async function gate(caseCode: string, type: DocType) {
   return { me, c } as const;
 }
 
+/**
+ * Stores the submission, turning a storage or database failure into a message on the form
+ * instead of an unhandled error that takes the whole page down.
+ */
+async function trySave(s: Parameters<typeof storeSubmission>[0]): Promise<SubmissionFormState | null> {
+  try {
+    await storeSubmission(s);
+    return null;
+  } catch (e) {
+    console.error("Saving submission failed", { caseCode: s.caseCode, type: s.type }, e);
+    return { error: s.file ? "The file couldn't be uploaded. Please try again." : "This couldn't be saved. Please try again." };
+  }
+}
+
 function done(caseCode: string): never {
   revalidatePath(`/cases/${caseCode}`);
   revalidatePath("/dashboard");
   redirect(`/cases/${caseCode}?tab=documents`);
 }
 
-export async function addShippingBill(caseCode: string, _prev: SubmissionFormState, formData: FormData): Promise<SubmissionFormState> {
-  const g = await gate(caseCode, "shipping_bill");
+/**
+ * Adds a structured document (shipping bill, e-way bill, lorry receipt, Form-13, VGM, e-seal record,
+ * invoice, packing list). The form posts its fields as one JSON `payload`; the type's handler validates,
+ * checks codes against the masters and normalises. What was typed is stored verbatim next to the result.
+ */
+export async function submitDocument(caseCode: string, type: DocType, _prev: SubmissionFormState, formData: FormData): Promise<SubmissionFormState> {
+  const handler = isDocType(type) ? DOC_HANDLERS[type] : undefined;
+  if (!handler) return { error: "Unknown document type." };
+  const g = await gate(caseCode, type);
   if ("error" in g) return { error: g.error };
   const { me, c } = g;
 
-  const parsed = shippingBillSchema.safeParse(parsePayload(formData));
-  if (!parsed.success) return { fieldErrors: issuesToFieldErrors(parsed.error.issues) };
-  const form = parsed.data;
   const file = fileOrNull(formData.get("file"));
   const bad = fileProblem(file);
   if (bad) return { fieldErrors: { file: bad } };
 
-  const fieldErrors = await checkAgainstMasters({
-    ports: [["portCode", form.portCode]],
-    hsCodes: form.lines.map((l, i) => [`lines.${i}.hsCode`, l.hsCode]),
-    uqc: form.lines.map((l, i) => [`lines.${i}.uqc`, l.uqc.toUpperCase()]),
-    massUnits: [["weightUnit", form.weightUnit.toUpperCase()]],
-    currencies: [["currency", form.currency.toUpperCase()]],
-  });
-  if (Object.keys(fieldErrors).length) return { fieldErrors, error: fieldErrors._form };
+  const out = await handler.run(parsePayload(formData));
+  if (!out.ok) return { error: out.error, fieldErrors: out.fieldErrors };
 
-  const received = await new ManualFilingSource().receive(form);
-  let result;
-  try {
-    result = normalizeShippingBill(received.input, await getUnitFactors());
-  } catch (e) {
-    if (e instanceof NormalizationError) return { error: e.message };
-    throw e;
-  }
-
-  await storeSubmission({
+  const failed = await trySave({
     caseId: c.id,
     caseCode: c.caseCode,
-    type: "shipping_bill",
+    type,
     actor: { id: me.id, role: me.role },
-    source: received.source,
-    documentNumber: result.normalized.documentNumber,
-    documentDate: result.normalized.documentDate,
-    raw: received.raw,
-    normalized: result.normalized,
-    provenance: result.provenance,
+    source: "manual",
+    documentNumber: out.normalized.documentNumber,
+    documentDate: out.normalized.documentDate,
+    raw: { enteredAs: "form", form: out.form },
+    normalized: out.normalized,
+    provenance: out.provenance,
     file,
   });
-  done(c.caseCode);
-}
-
-export async function addEwayBill(caseCode: string, _prev: SubmissionFormState, formData: FormData): Promise<SubmissionFormState> {
-  const g = await gate(caseCode, "eway_bill");
-  if ("error" in g) return { error: g.error };
-  const { me, c } = g;
-
-  const parsed = ewayBillSchema.safeParse(parsePayload(formData));
-  if (!parsed.success) return { fieldErrors: issuesToFieldErrors(parsed.error.issues) };
-  const form = parsed.data;
-  const file = fileOrNull(formData.get("file"));
-  const bad = fileProblem(file);
-  if (bad) return { fieldErrors: { file: bad } };
-
-  const fieldErrors = await checkAgainstMasters({
-    // HSN on an e-way bill can be 4 to 8 digits; only full ITC-HS codes can be checked against the master.
-    hsCodes: form.lines.flatMap((l, i): Array<[string, string]> => (l.hsCode.length === 8 ? [[`lines.${i}.hsCode`, l.hsCode]] : [])),
-    uqc: form.lines.map((l, i): [string, string] => [`lines.${i}.uqc`, l.uqc.toUpperCase()]),
-  });
-  if (Object.keys(fieldErrors).length) return { fieldErrors, error: fieldErrors._form };
-
-  const received = await new ManualEwayBillSource().receive(form);
-  let result;
-  try {
-    result = normalizeEwayBill(received.input);
-  } catch (e) {
-    if (e instanceof NormalizationError) return { error: e.message };
-    throw e;
-  }
-
-  await storeSubmission({
-    caseId: c.id,
-    caseCode: c.caseCode,
-    type: "eway_bill",
-    actor: { id: me.id, role: me.role },
-    source: received.source,
-    documentNumber: result.normalized.documentNumber,
-    documentDate: result.normalized.documentDate,
-    raw: received.raw,
-    normalized: result.normalized,
-    provenance: result.provenance,
-    file,
-  });
-  done(c.caseCode);
-}
-
-export async function addLorryReceipt(caseCode: string, _prev: SubmissionFormState, formData: FormData): Promise<SubmissionFormState> {
-  const g = await gate(caseCode, "lorry_receipt");
-  if ("error" in g) return { error: g.error };
-  const { me, c } = g;
-
-  const parsed = lorryReceiptSchema.safeParse(parsePayload(formData));
-  if (!parsed.success) return { fieldErrors: issuesToFieldErrors(parsed.error.issues) };
-  const form = parsed.data;
-  const file = fileOrNull(formData.get("file"));
-  const bad = fileProblem(file);
-  if (bad) return { fieldErrors: { file: bad } };
-
-  let driverPhone: string | null = null;
-  if (form.driverPhone) {
-    const phone = parsePhone(form.driverPhoneCountry, form.driverPhone);
-    if (!phone.ok) return { fieldErrors: { driverPhone: phone.message } };
-    driverPhone = phone.e164;
-  }
-
-  const received = await new ManualLorryReceiptSource().receive(form);
-  let result;
-  try {
-    result = normalizeLorryReceipt({ ...received.input, driverPhone });
-  } catch (e) {
-    if (e instanceof NormalizationError) return { error: e.message };
-    throw e;
-  }
-
-  await storeSubmission({
-    caseId: c.id,
-    caseCode: c.caseCode,
-    type: "lorry_receipt",
-    actor: { id: me.id, role: me.role },
-    source: received.source,
-    documentNumber: result.normalized.documentNumber,
-    documentDate: result.normalized.documentDate,
-    raw: received.raw,
-    normalized: result.normalized,
-    provenance: result.provenance,
-    file,
-  });
+  if (failed) return failed;
   done(c.caseCode);
 }
 
@@ -202,7 +112,7 @@ export async function addFileDocument(
   else if (documentDate && documentDate > new Date().toISOString().slice(0, 10)) fieldErrors.documentDate = "The date can't be in the future.";
   if (Object.keys(fieldErrors).length) return { fieldErrors };
 
-  await storeSubmission({
+  const failed = await trySave({
     caseId: c.id,
     caseCode: c.caseCode,
     type,
@@ -212,6 +122,7 @@ export async function addFileDocument(
     documentDate,
     file,
   });
+  if (failed) return failed;
   done(c.caseCode);
 }
 
