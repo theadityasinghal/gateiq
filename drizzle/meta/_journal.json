@@ -50,6 +50,13 @@
       "when": 1794329812956,
       "tag": "0006_corrections_check_acks",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794330198500,
+      "tag": "0007_document_extraction",
+      "breakpoints": true
     }
   ]
 }

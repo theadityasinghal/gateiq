@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { caseSubmission, checkAck, shipmentCase } from "@/db/schema";
+import { caseSubmission, checkAck, documentExtraction, shipmentCase } from "@/db/schema";
+import { changedFields } from "@/lib/extract/postprocess";
 import { DOC_TYPES, canAddDocument, docLabelInline, isDocType, type DocType } from "@/lib/documents";
 import { ROLE_INFO } from "@/lib/roles";
 import { requireOnboardedUser } from "@/server/session";
@@ -73,22 +74,44 @@ export async function submitDocument(caseCode: string, type: DocType, _prev: Sub
 
   const out = await handler.run(parsePayload(formData));
   if (!out.ok) return { error: out.error, fieldErrors: out.fieldErrors };
-  const supersedes = String(formData.get("supersedesId") ?? "");
-  const supersedesId = /^[0-9a-f-]{36}$/i.test(supersedes) ? supersedes : null;
+  const uuidField = (k: string) => {
+    const v = String(formData.get(k) ?? "");
+    return /^[0-9a-f-]{36}$/i.test(v) ? v : null;
+  };
+  const supersedesId = uuidField("supersedesId");
+  const extractionId = uuidField("extractionId");
+
+  // Confirming a reading: it must be this person's, for this case and type, and not used already.
+  let extraction: typeof documentExtraction.$inferSelect | null = null;
+  if (extractionId) {
+    [extraction] = await db
+      .select()
+      .from(documentExtraction)
+      .where(and(eq(documentExtraction.id, extractionId), eq(documentExtraction.caseId, c.id), eq(documentExtraction.userId, me.id), eq(documentExtraction.type, type)));
+    if (!extraction) return { error: "That reading isn't available any more. Read the file again, or type the details in." };
+    const [used] = await db.select({ id: caseSubmission.id }).from(caseSubmission).where(eq(caseSubmission.extractionId, extraction.id));
+    if (used) return { error: "This reading has already been saved as a document." };
+  }
+  const offered = (extraction?.offered as { initial?: Record<string, unknown> } | undefined)?.initial ?? {};
 
   const failed = await trySave({
     caseId: c.id,
     caseCode: c.caseCode,
     type,
     actor: { id: me.id, role: me.role },
-    source: "manual",
+    source: extraction ? "extracted" : "manual",
     documentNumber: out.normalized.documentNumber,
     documentDate: out.normalized.documentDate,
-    raw: { enteredAs: "form", form: out.form },
+    raw: extraction
+      ? { enteredAs: "extracted", extractionId: extraction.id, model: extraction.model, qr: !!extraction.qrText, form: out.form, ...changedFields(offered, out.form) }
+      : { enteredAs: "form", form: out.form },
     normalized: out.normalized,
     provenance: out.provenance,
-    file,
+    file: extraction ? null : file,
     supersedesId,
+    extraction: extraction
+      ? { id: extraction.id, storagePath: extraction.storagePath, fileName: extraction.fileName, mimeType: extraction.mimeType, sizeBytes: extraction.sizeBytes, sha256: extraction.sha256 }
+      : null,
   });
   if (failed) return failed;
   done(c.caseCode);

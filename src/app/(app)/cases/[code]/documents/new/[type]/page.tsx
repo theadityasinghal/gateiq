@@ -11,6 +11,11 @@ import { listPhoneCountries } from "@/lib/phone";
 import { ButtonLink } from "@/components/ui/button";
 import { DOC_FORMS, type OptionSource, type StaticOption } from "@/lib/doc-forms";
 import { StructuredDocForm } from "./structured-doc-form";
+import { DocEntry } from "./doc-entry";
+import { geminiConfigured } from "@/server/extract/gemini";
+
+/** Reading a file calls the vision model from a Server Action on this page; give it time. */
+export const maxDuration = 60;
 import { FileDocumentForm } from "./file-document-form";
 
 type Props = { params: Promise<{ code: string; type: string }>; searchParams: Promise<{ correct?: string }> };
@@ -94,13 +99,16 @@ export default async function AddDocumentPage({ params, searchParams }: Props) {
   if (DOC_FORMS[type]) {
     const [options, status] = await Promise.all([loadOptions(), masterStatus()]);
     if (USES_MASTERS.has(type)) notice = <MastersNotice status={status} />;
-    form = (
-      <StructuredDocForm
+    form = correcting ? (
+      <StructuredDocForm caseCode={c.caseCode} type={type} options={options} initial={correcting.form} hidden={{ supersedesId: correcting.id }} />
+    ) : (
+      <DocEntry
         caseCode={c.caseCode}
         type={type}
+        label={info.label}
         options={options}
-        initial={correcting?.form}
-        hidden={correcting ? { supersedesId: correcting.id } : undefined}
+        canRead={geminiConfigured()}
+        hasQr={type === "commercial_invoice" || type === "eway_bill"}
       />
     );
   } else {

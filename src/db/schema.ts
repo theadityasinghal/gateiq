@@ -255,7 +255,8 @@ export const caseMember = pgTable(
 
 /* ───────────── Submissions: everything people add to a case ───────────── */
 
-export const submissionSourceEnum = pgEnum("submission_source", ["manual", "upload", "ulip"]);
+/** manual: typed in. upload: a file only. ulip: fetched from a government system. extracted: read from a photo or PDF and confirmed by the adder. */
+export const submissionSourceEnum = pgEnum("submission_source", ["manual", "upload", "ulip", "extracted"]);
 
 /**
  * One document one person added to a case: a typed-in shipping bill, e-way bill or lorry receipt, or an
@@ -288,6 +289,8 @@ export const caseSubmission = pgTable(
     provenance: jsonb("provenance").$type<Record<string, string>>(),
     /** The earlier version this one corrects. Saving a correction marks that version removed. */
     supersedesId: uuid("supersedes_id"),
+    /** When the fields were read from a file: the reading they were confirmed from. */
+    extractionId: uuid("extraction_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     removedAt: timestamp("removed_at", { withTimezone: true }),
     removedBy: text("removed_by").references(() => user.id),
@@ -296,7 +299,44 @@ export const caseSubmission = pgTable(
     index("case_submission_case_type_idx").on(t.caseId, t.type),
     index("case_submission_added_by_idx").on(t.addedBy),
     index("case_submission_supersedes_idx").on(t.supersedesId),
+    uniqueIndex("case_submission_extraction_uq").on(t.extractionId),
   ],
+);
+
+/**
+ * One reading of an uploaded photo or PDF: the file (stored once), any QR code found in the browser, and
+ * exactly what the vision model returned. The adder then confirms or corrects the fields; the submission
+ * made from it records which fields they changed. Readings that are never confirmed keep their file.
+ */
+export const documentExtraction = pgTable(
+  "document_extraction",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => shipmentCase.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    /** A key of DOC_TYPES. */
+    type: text("type").notNull(),
+    storagePath: text("storage_path").notNull(),
+    fileName: text("file_name").notNull(),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    sha256: text("sha256").notNull(),
+    /** The raw QR text decoded in the browser, if any. */
+    qrText: text("qr_text"),
+    /** Model id, or null when only the QR code was used. */
+    model: text("model"),
+    promptVersion: text("prompt_version").notNull(),
+    /** The model's JSON exactly as returned (null when not called). */
+    output: jsonb("output"),
+    /** The form values and per-field meta offered to the adder. */
+    offered: jsonb("offered").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("document_extraction_case_idx").on(t.caseId)],
 );
 
 /**

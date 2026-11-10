@@ -24,7 +24,7 @@ export type NewSubmission = {
   caseCode: string;
   type: DocType;
   actor: { id: string; role: Role };
-  source: "manual" | "upload" | "ulip";
+  source: "manual" | "upload" | "ulip" | "extracted";
   documentNumber?: string | null;
   documentDate?: string | null;
   /** Exactly what was received. Its hash is stored next to it. */
@@ -37,6 +37,8 @@ export type NewSubmission = {
    * and its files carry over unless a new file is attached.
    */
   supersedesId?: string | null;
+  /** The confirmed reading this was made from. Its already-stored file is attached instead of `file`. */
+  extraction?: { id: string; storagePath: string; fileName: string; mimeType: string; sizeBytes: number; sha256: string } | null;
 };
 
 /** The version being corrected was removed or replaced in the meantime. */
@@ -47,7 +49,7 @@ export class SupersededError extends Error {}
  * write then fails, the stored file is removed again. Never updates an existing submission.
  */
 export async function storeSubmission(s: NewSubmission) {
-  const upload = s.file ? await uploadCaseDocument(s.caseId, s.file) : null;
+  const upload = s.file && !s.extraction ? await uploadCaseDocument(s.caseId, s.file) : null;
   const rawSha256 = s.raw === undefined ? null : createHash("sha256").update(canonicalJson(s.raw)).digest("hex");
   try {
     return await db.transaction(async (tx) => {
@@ -67,7 +69,7 @@ export async function storeSubmission(s: NewSubmission) {
           )
           .returning({ id: caseSubmission.id });
         if (!replaced.length) throw new SupersededError("The version being corrected is no longer current.");
-        if (!upload) carried = await tx.select().from(caseDocument).where(eq(caseDocument.submissionId, s.supersedesId));
+        if (!upload && !s.extraction) carried = await tx.select().from(caseDocument).where(eq(caseDocument.submissionId, s.supersedesId));
       }
       const [row] = await tx
         .insert(caseSubmission)
@@ -84,8 +86,21 @@ export async function storeSubmission(s: NewSubmission) {
           normalized: s.normalized ?? null,
           provenance: s.provenance ?? null,
           supersedesId: s.supersedesId ?? null,
+          extractionId: s.extraction?.id ?? null,
         })
         .returning({ id: caseSubmission.id });
+      if (s.extraction) {
+        await tx.insert(caseDocument).values({
+          caseId: s.caseId,
+          submissionId: row.id,
+          storagePath: s.extraction.storagePath,
+          fileName: s.extraction.fileName,
+          mimeType: s.extraction.mimeType,
+          sizeBytes: s.extraction.sizeBytes,
+          sha256: s.extraction.sha256,
+          uploadedBy: s.actor.id,
+        });
+      }
       for (const d of carried) {
         await tx.insert(caseDocument).values({
           caseId: d.caseId,
@@ -125,8 +140,9 @@ export async function storeSubmission(s: NewSubmission) {
             source: s.source,
             documentNumber: s.documentNumber ?? null,
             rawSha256,
-            fileSha256: upload?.sha256 ?? null,
+            fileSha256: upload?.sha256 ?? s.extraction?.sha256 ?? null,
             supersedesId: s.supersedesId ?? null,
+            extractionId: s.extraction?.id ?? null,
           },
         },
         tx,
