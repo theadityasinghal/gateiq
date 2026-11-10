@@ -4,6 +4,9 @@ import { tintBg } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TeamCredit } from "@/components/team-credit";
 import type { Tint } from "@/lib/roles";
+import { ArrowRight, Clock, FilePlus2, ScanLine, ShieldCheck, UserPlus, type LucideIcon } from "lucide-react";
+
+const stageIcon: LucideIcon[] = [FilePlus2, ScanLine, ShieldCheck];
 
 const stages: Array<{ n: string; title: string; body: string; tint: Tint }> = [
   {
@@ -52,10 +55,10 @@ export default function Home() {
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-3">
             <ButtonLink href="/sign-in?mode=sign-up" variant="primary">
-              Create an account
+              <UserPlus size={16} strokeWidth={1.8} aria-hidden="true" />Create an account
             </ButtonLink>
             <ButtonLink href="#how" variant="secondary-on-dark">
-              How it works
+              How it works<ArrowRight size={16} strokeWidth={1.8} aria-hidden="true" />
             </ButtonLink>
           </div>
         </div>
@@ -65,16 +68,22 @@ export default function Home() {
         <h2 className="text-[28px] font-semibold leading-[1.2] tracking-[-0.5px] sm:text-h2">How a consignment moves through GateIQ</h2>
         <p className="mt-3 max-w-[640px] text-slate">The first three stages are live. Gate, weighbridge and inspection stages follow.</p>
         <div className="mt-10 grid gap-4 md:grid-cols-3">
-          {stages.map((s) => (
+          {stages.map((s, i) => {
+            const Icon = stageIcon[i];
+            return (
             <div key={s.n} className={`${tintBg[s.tint]} rounded-lg p-8 text-charcoal`}>
-              <span className="text-micro-upper text-slate">Stage {s.n}</span>
+              <span className="flex items-center justify-between text-micro-upper text-slate">
+                Stage {s.n}
+                <Icon size={24} strokeWidth={1.6} aria-hidden="true" />
+              </span>
               <h3 className="mt-3 text-h4">{s.title}</h3>
               <p className="mt-2 text-body-sm">{s.body}</p>
             </div>
-          ))}
+            );
+          })}
         </div>
         <div className="mt-4 rounded-lg bg-tint-yellow-bold p-8 text-charcoal">
-          <span className="text-micro-upper text-slate">Coming next</span>
+          <span className="flex items-center gap-1.5 text-micro-upper text-slate"><Clock size={14} strokeWidth={2} aria-hidden="true" />Coming next</span>
           <h3 className="mt-3 text-h4">Direct ICEGATE and e-way bill lookups</h3>
           <p className="mt-2 max-w-[720px] text-body-sm">
             Through ULIP, GateIQ will fetch the filed record itself instead of relying on what was typed, and mark it as source-verified.

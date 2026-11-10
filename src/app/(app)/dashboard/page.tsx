@@ -7,7 +7,7 @@ import { listCasesForOwner, listPendingInvites, listSharedCases, type CaseRow, t
 import { respondToInvite } from "@/server/cases/members";
 import { summarizeChecks, type CheckSummary } from "@/server/cases/checks";
 import type { Role } from "@/lib/roles";
-import { Wrench } from "lucide-react";
+import { ArrowRight, Check, Info, Mail, PackageOpen, Plus, UserRound, Wrench, X } from "lucide-react";
 import { StatusCount, StatusIcon } from "@/components/ui/status";
 import { ROLE_INFO } from "@/lib/roles";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -50,7 +50,7 @@ export default async function DashboardPage() {
             {user.role === "consignor" ? "Your cases" : `Welcome, ${user.name.split(" ")[0]}`}
           </h1>
         </div>
-        {user.role === "consignor" ? <ButtonLink href="/cases/new">New case</ButtonLink> : null}
+        {user.role === "consignor" ? <ButtonLink href="/cases/new"><Plus size={16} strokeWidth={2} aria-hidden="true" />New case</ButtonLink> : null}
       </div>
 
       {invites.length ? <Invitations invites={invites} /> : null}
@@ -60,7 +60,7 @@ export default async function DashboardPage() {
       <Card>
         <div className="mb-4 flex items-center justify-between gap-4">
           <h2 className="text-h5">Profile checks</h2>
-          <Link href="/profile" className="text-[14px] font-medium text-link-blue">Edit profile</Link>
+          <Link href="/profile" className="inline-flex items-center gap-1.5 text-[14px] font-medium text-link-blue"><UserRound size={16} strokeWidth={1.8} aria-hidden="true" />Edit profile</Link>
         </div>
         <ul className="divide-y divide-hairline-soft">
           {checks.map((c) => (
@@ -82,6 +82,7 @@ function Invitations({ invites }: { invites: PendingInvite[] }) {
   return (
     <section aria-labelledby="invites-heading" className="rounded-lg border border-hairline bg-canvas p-6">
       <div className="mb-4 flex items-center gap-2">
+        <Mail size={20} strokeWidth={1.8} className="text-steel" aria-hidden="true" />
         <h2 id="invites-heading" className="text-h5">Invitations</h2>
         <Tag tone="orange">{invites.length}</Tag>
       </div>
@@ -92,14 +93,14 @@ function Invitations({ invites }: { invites: PendingInvite[] }) {
               <p className="font-mono text-[15px] font-medium text-charcoal">{i.caseCode}</p>
               <p className="text-caption text-steel">
                 {i.inviterName} <span className="font-mono">@{i.inviterUsername}</span>
-                {i.inviterRole ? ` (${ROLE_INFO[i.inviterRole].label})` : ""} invited you · {i.exportPortCode} → {countryName(i.destinationCountry)} ·{" "}
+                {i.inviterRole ? ` (${ROLE_INFO[i.inviterRole].label})` : ""} invited you · {i.exportPortCode} <ArrowRight size={12} className="inline" aria-label="to" role="img" /> {countryName(i.destinationCountry)} ·{" "}
                 {formatDate(i.createdAt)}
               </p>
             </div>
             <form action={respondToInvite} className="flex gap-2">
               <input type="hidden" name="memberId" value={i.id} />
-              <Button type="submit" name="decision" value="decline" variant="secondary">Decline</Button>
-              <Button type="submit" name="decision" value="accept">Accept</Button>
+              <Button type="submit" name="decision" value="decline" variant="secondary"><X size={16} strokeWidth={2} aria-hidden="true" />Decline</Button>
+              <Button type="submit" name="decision" value="accept"><Check size={16} strokeWidth={2} aria-hidden="true" />Accept</Button>
             </form>
           </li>
         ))}
@@ -120,11 +121,12 @@ async function OwnCases({ viewer }: { viewer: Viewer }) {
   if (!cases.length) {
     return (
       <div className="rounded-lg bg-surface p-10 text-center">
+        <PackageOpen size={40} strokeWidth={1.4} className="mx-auto mb-3 text-steel" aria-hidden="true" />
         <h2 className="text-h4">No cases yet</h2>
         <p className="mx-auto mt-2 max-w-[480px] text-slate">
           Create a case for each consignment. You&apos;ll get a Case ID, and you can invite your consignee, CHA and transporter to it.
         </p>
-        <ButtonLink href="/cases/new" className="mt-6">Create your first case</ButtonLink>
+        <ButtonLink href="/cases/new" className="mt-6"><Plus size={16} strokeWidth={2} aria-hidden="true" />Create your first case</ButtonLink>
       </div>
     );
   }
@@ -141,8 +143,9 @@ async function SharedCases({ viewer, tint }: { viewer: Viewer; tint: string }) {
         <CaseTable cases={cases} checks={checks} />
       ) : (
         <div className={`${tint} rounded-lg p-8 text-charcoal`}>
-          <p className="max-w-[640px] text-body-sm">
-            When someone invites you to a case, the invite shows up here. Once you accept, you can view the case. Give them your username so they can find you.
+          <p className="flex max-w-[640px] items-start gap-2 text-body-sm">
+            <Info size={18} strokeWidth={1.8} className="mt-0.5 shrink-0" aria-hidden="true" />
+            <span>When someone invites you to a case, the invite shows up here. Once you accept, you can view the case. Give them your username so they can find you.</span>
           </p>
         </div>
       )}
@@ -198,7 +201,7 @@ function CaseTable({ cases, checks }: { cases: CaseRow[]; checks: Record<string,
                   c.consigneeName ?? <span className="text-steel">Not invited yet</span>
                 )}
               </td>
-              <td className="px-5 py-4 text-slate">{c.exportPortCode} → {countryName(c.destinationCountry)}</td>
+              <td className="px-5 py-4 text-slate"><span className="inline-flex items-center gap-1.5">{c.exportPortCode} <ArrowRight size={14} strokeWidth={1.8} aria-label="to" role="img" /> {countryName(c.destinationCountry)}</span></td>
               <td className="px-5 py-4">
                 <Tag tone={c.status === "filed_baseline_ready" ? "green" : "orange"}>{CASE_STATUS_LABEL[c.status]}</Tag>
               </td>

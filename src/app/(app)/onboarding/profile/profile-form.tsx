@@ -10,6 +10,7 @@ import { saveProfile, type FormState } from "@/server/onboarding/actions";
 import type { VerificationLevel } from "@/lib/verify/types";
 import type { PhoneCountry } from "@/lib/phone";
 import { PhoneInput } from "@/components/phone-input";
+import { Info } from "lucide-react";
 
 type Values = Record<"legalName" | "organisation" | "address" | "phone" | "phoneCountry" | "iec" | "gstin" | "idValue", string>;
 type Check = { level: VerificationLevel; message: string };
@@ -103,7 +104,7 @@ export function ProfileForm({
       ) : null}
 
       <details className="rounded-lg bg-surface p-5 text-body-sm text-charcoal">
-        <summary className="cursor-pointer font-medium">What do the badges mean?</summary>
+        <summary className="flex cursor-pointer items-center gap-2 font-medium"><Info size={16} strokeWidth={1.8} className="text-steel" aria-hidden="true" />What do the badges mean?</summary>
         <ul className="mt-3 space-y-2">
           {(["owned", "exists", "format_valid", "self_declared", "invalid"] as const).map((l) => (
             <li key={l} className="flex items-start gap-3">

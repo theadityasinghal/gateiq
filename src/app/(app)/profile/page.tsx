@@ -5,6 +5,7 @@ import { loadProfileForm } from "@/server/onboarding/profile-data";
 import { ProfileForm } from "../onboarding/profile/profile-form";
 import { RoleChangeForm } from "./role-change-form";
 import { Card } from "@/components/ui/card";
+import { AtSign, Info } from "lucide-react";
 
 export const metadata = { title: "Profile" };
 
@@ -24,11 +25,12 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
       <p className="text-micro-upper text-steel">{info.label}</p>
       <h1 className="mt-2 text-[32px] font-semibold leading-[1.2] tracking-[-0.5px] sm:text-h2">Profile</h1>
       <p className="mt-2 text-body-sm text-slate">
-        Username <span className="font-mono font-medium text-charcoal">@{user.username}</span>. Others use it to add you to cases. It can&apos;t be changed.
+        <AtSign size={14} className="mr-1 inline" aria-hidden="true" />Username <span className="font-mono font-medium text-charcoal">@{user.username}</span>. Others use it to add you to cases. It can&apos;t be changed.
       </p>
       {changed ? (
-        <p role="status" className="mt-4 rounded-lg bg-surface p-4 text-body-sm text-charcoal">
-          Your account type is now {info.label}. Fill in any details for it below.
+        <p role="status" className="mt-4 flex items-start gap-2 rounded-lg bg-surface p-4 text-body-sm text-charcoal">
+          <Info size={18} strokeWidth={1.8} className="mt-0.5 shrink-0 text-steel" aria-hidden="true" />
+          <span>Your account type is now {info.label}. Fill in any details for it below.</span>
         </p>
       ) : null}
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/server/session";
 import { ROLE_INFO } from "@/lib/roles";
 import { SignOutButton } from "./sign-out-button";
+import { UserRound } from "lucide-react";
 
 export async function UserMenu() {
   const user = await getCurrentUser();
@@ -24,7 +25,8 @@ export async function UserMenu() {
         </span>
       )}
       {user.hasProfile ? (
-        <Link href="/profile" className="hidden text-[14px] font-medium text-link-blue sm:inline">
+        <Link href="/profile" className="hidden items-center gap-1.5 text-[14px] font-medium text-link-blue sm:inline-flex">
+          <UserRound size={16} strokeWidth={1.8} aria-hidden="true" />
           Profile
         </Link>
       ) : null}

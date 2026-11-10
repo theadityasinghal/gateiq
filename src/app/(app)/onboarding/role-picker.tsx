@@ -7,6 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Tag } from "@/components/ui/badge";
 import { chooseRole, type FormState } from "@/server/onboarding/actions";
 import { cn } from "@/lib/cn";
+import { Anchor, ArrowRight, Building2, Check, CircleX, DoorOpen, Eye, FileText, Package, Route, Scale, Search, ShieldCheck, Stamp, Truck, type LucideIcon } from "lucide-react";
+
+const ROLE_ICON: Record<Role, LucideIcon> = {
+  consignor: Package,
+  consignee: Building2,
+  cha: FileText,
+  transporter: Truck,
+  driver: Route,
+  gate_officer: DoorOpen,
+  weighbridge_operator: Scale,
+  customs_inspector: Search,
+  customs_superintendent: Stamp,
+  terminal_admin: Anchor,
+  vigilance_auditor: Eye,
+};
 
 export function RolePicker({ current }: { current: Role | null }) {
   const [selected, setSelected] = useState<Role | null>(current);
@@ -38,7 +53,10 @@ export function RolePicker({ current }: { current: Role | null }) {
                   className="sr-only"
                 />
                 <span className="flex items-start justify-between gap-2">
-                  <span className="text-h5">{info.label}</span>
+                  <span className="flex items-center gap-2 text-h5">
+                    {(() => { const I = ROLE_ICON[role]; return <I size={20} strokeWidth={1.8} className="shrink-0" aria-hidden="true" />; })()}
+                    {info.label}
+                  </span>
                   <span
                     aria-hidden="true"
                     className={cn(
@@ -46,13 +64,13 @@ export function RolePicker({ current }: { current: Role | null }) {
                       checked ? "border-primary bg-primary" : "border-hairline-strong bg-canvas",
                     )}
                   >
-                    {checked ? <span className="h-2 w-2 rounded-full bg-on-primary" /> : null}
+                    {checked ? <Check size={12} strokeWidth={3} className="text-on-primary" /> : null}
                   </span>
                 </span>
                 <span className="text-body-sm">{info.blurb}</span>
                 {info.official ? (
                   <span>
-                    <Tag tone="gray">Official role</Tag>
+                    <Tag tone="gray"><ShieldCheck size={13} strokeWidth={2} aria-hidden="true" />Official role</Tag>
                   </span>
                 ) : null}
               </label>
@@ -61,13 +79,14 @@ export function RolePicker({ current }: { current: Role | null }) {
         </div>
       </fieldset>
       {state.error ? (
-        <p role="alert" className="mt-4 text-body-sm text-error">
+        <p role="alert" className="mt-4 flex items-center gap-1.5 text-body-sm text-error">
+          <CircleX size={16} strokeWidth={1.8} aria-hidden="true" />
           {state.error}
         </p>
       ) : null}
       <div className="mt-8 flex justify-end">
         <Button type="submit" disabled={!selected || pending}>
-          {pending ? "Saving…" : "Continue"}
+          {pending ? "Saving…" : <>Continue<ArrowRight size={16} strokeWidth={2} aria-hidden="true" /></>}
         </Button>
       </div>
     </form>

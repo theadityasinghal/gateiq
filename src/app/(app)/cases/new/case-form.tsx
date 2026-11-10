@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, SectionTitle } from "@/components/ui/card";
 import { createCase, type CaseFormState } from "@/server/cases/actions";
 import { INCOTERMS_2020, PERISHABLE_CERTIFICATES } from "@/lib/incoterms";
+import { CircleX, PackagePlus, Plus, Trash2 } from "lucide-react";
 
 type Option = { code: string; name: string };
 
@@ -125,7 +126,7 @@ export function CaseForm({
                 <div className="mb-4 flex items-center justify-between">
                   <span className="text-micro-upper text-steel">Line {i + 1}</span>
                   {lines.length > 1 ? (
-                    <Button type="button" variant="ghost" onClick={() => setLines((ls) => ls.filter((_, j) => j !== i))}>Remove</Button>
+                    <Button type="button" variant="ghost" onClick={() => setLines((ls) => ls.filter((_, j) => j !== i))}><Trash2 size={16} strokeWidth={1.8} aria-hidden="true" />Remove</Button>
                   ) : null}
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -171,7 +172,7 @@ export function CaseForm({
           })}
         </div>
         <Button type="button" variant="secondary" className="mt-4" onClick={() => setLines((ls) => [...ls, emptyLine(defaultMass)])}>
-          Add line
+          <Plus size={16} strokeWidth={2} aria-hidden="true" />Add line
         </Button>
       </Card>
 
@@ -223,12 +224,13 @@ export function CaseForm({
       </Card>
 
       {state.error || state.fieldErrors ? (
-        <p role="alert" className="text-body-sm text-error">
+        <p role="alert" className="flex items-center gap-1.5 text-body-sm text-error">
+          <CircleX size={16} strokeWidth={1.8} aria-hidden="true" />
           {state.error ?? "Some fields need attention. They are marked above."}
         </p>
       ) : null}
       <div className="flex justify-end gap-3">
-        <Button type="submit" disabled={pending}>{pending ? "Creating case…" : "Create case"}</Button>
+        <Button type="submit" disabled={pending}>{pending ? "Creating case…" : <><PackagePlus size={16} strokeWidth={1.8} aria-hidden="true" />Create case</>}</Button>
       </div>
     </form>
   );

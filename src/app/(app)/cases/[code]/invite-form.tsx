@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { findInvitee, inviteToCase, type Invitee } from "@/server/cases/members";
 import { USERNAME_MAX } from "@/lib/username";
+import { CircleCheck, CircleX, Search, Send } from "lucide-react";
 
 /** Exact-username lookup first, so the inviter sees the name and account type before sending. */
 export function InviteForm({ caseCode, invitable }: { caseCode: string; invitable: string[] }) {
@@ -67,7 +68,7 @@ export function InviteForm({ caseCode, invitable }: { caseCode: string; invitabl
           />
         </Field>
         <Button type="submit" variant="secondary" disabled={pending || !username.trim()} className="sm:mb-[22px]">
-          {pending && !found ? "Finding…" : "Find"}
+          <Search size={16} strokeWidth={1.8} aria-hidden="true" />{pending && !found ? "Finding…" : "Find"}
         </Button>
       </form>
 
@@ -81,13 +82,13 @@ export function InviteForm({ caseCode, invitable }: { caseCode: string; invitabl
           </div>
           <div className="flex gap-2">
             <Button type="button" variant="ghost" onClick={() => setFound(null)} disabled={pending}>Cancel</Button>
-            <Button type="button" onClick={onSend} disabled={pending}>{pending ? "Sending…" : "Send invite"}</Button>
+            <Button type="button" onClick={onSend} disabled={pending}><Send size={16} strokeWidth={1.8} aria-hidden="true" />{pending ? "Sending…" : "Send invite"}</Button>
           </div>
         </div>
       ) : null}
 
-      {error ? <p role="alert" className="text-body-sm text-error">{error}</p> : null}
-      {sent ? <p role="status" className="text-body-sm text-tag-green-fg">{sent}</p> : null}
+      {error ? <p role="alert" className="flex items-center gap-1.5 text-body-sm text-error"><CircleX size={16} strokeWidth={1.8} aria-hidden="true" />{error}</p> : null}
+      {sent ? <p role="status" className="flex items-center gap-1.5 text-body-sm text-tag-green-fg"><CircleCheck size={16} strokeWidth={1.8} aria-hidden="true" />{sent}</p> : null}
     </div>
   );
 }

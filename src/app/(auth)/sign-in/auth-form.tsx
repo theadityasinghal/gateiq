@@ -9,6 +9,7 @@ import { cn } from "@/lib/cn";
 import { PhoneInput } from "@/components/phone-input";
 import { DEFAULT_PHONE_COUNTRY, type PhoneCountry } from "@/lib/phone";
 import { USERNAME_MAX, validateUsername } from "@/lib/username";
+import { CircleX, LogIn, UserPlus } from "lucide-react";
 
 /** Only same-site relative paths are accepted as a post-login destination. */
 function safeNext(next: string | null): string {
@@ -136,12 +137,13 @@ export function AuthForm({ countries }: { countries: PhoneCountry[] }) {
           </Field>
         ) : null}
         {error ? (
-          <p role="alert" className="text-caption text-error">
+          <p role="alert" className="flex items-center gap-1.5 text-caption text-error">
+            <CircleX size={14} strokeWidth={1.8} aria-hidden="true" />
             {error}
           </p>
         ) : null}
         <Button type="submit" className="h-11 w-full" disabled={pending}>
-          {pending ? (mode === "sign-in" ? "Signing in…" : "Creating account…") : mode === "sign-in" ? "Sign in" : "Create account"}
+          {pending ? (mode === "sign-in" ? "Signing in…" : "Creating account…") : mode === "sign-in" ? <><LogIn size={16} strokeWidth={1.8} aria-hidden="true" />Sign in</> : <><UserPlus size={16} strokeWidth={1.8} aria-hidden="true" />Create account</>}
         </Button>
       </form>
     </div>

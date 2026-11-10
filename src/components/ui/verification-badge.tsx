@@ -1,18 +1,20 @@
+import { BadgeCheck, CircleCheck, CircleX, Pencil, ShieldCheck, type LucideIcon } from "lucide-react";
 import { Tag } from "./badge";
 import type { VerificationLevel } from "@/lib/verify/types";
 
-const map: Record<VerificationLevel, { label: string; tone: "green" | "purple" | "orange" | "gray" | "red" }> = {
-  owned: { label: "Owned", tone: "green" },
-  exists: { label: "Exists", tone: "purple" },
-  format_valid: { label: "Format valid", tone: "gray" },
-  self_declared: { label: "Self-declared", tone: "orange" },
-  invalid: { label: "Invalid", tone: "red" },
+const map: Record<VerificationLevel, { label: string; tone: "green" | "purple" | "orange" | "gray" | "red"; Icon: LucideIcon }> = {
+  owned: { label: "Owned", tone: "green", Icon: ShieldCheck },
+  exists: { label: "Exists", tone: "purple", Icon: BadgeCheck },
+  format_valid: { label: "Format valid", tone: "gray", Icon: CircleCheck },
+  self_declared: { label: "Self-declared", tone: "orange", Icon: Pencil },
+  invalid: { label: "Invalid", tone: "red", Icon: CircleX },
 };
 
 export function VerificationBadge({ level, message }: { level: VerificationLevel; message?: string }) {
   const m = map[level];
   return (
     <Tag tone={m.tone} title={message}>
+      <m.Icon size={13} strokeWidth={2} aria-hidden="true" />
       {m.label}
     </Tag>
   );

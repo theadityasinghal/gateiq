@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "./ui/button";
+import { LogOut } from "lucide-react";
 
 export function SignOutButton() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export function SignOutButton() {
         router.refresh();
       }}
     >
+      <LogOut size={16} strokeWidth={1.8} aria-hidden="true" />
       Sign out
     </Button>
   );

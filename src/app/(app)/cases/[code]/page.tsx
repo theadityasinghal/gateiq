@@ -23,6 +23,7 @@ import { SegmentedTabs } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Tag } from "@/components/ui/badge";
 import { CopyButton } from "@/components/copy-button";
+import { Package, Route, TriangleExclamationPoint, Users } from "lucide-react";
 
 type Props = { params: Promise<{ code: string }>; searchParams: Promise<{ tab?: string; upload?: string }> };
 
@@ -78,8 +79,9 @@ export default async function CasePage({ params, searchParams }: Props) {
       />
 
       {upload === "failed" ? (
-        <p role="alert" className="rounded-lg bg-tag-red-bg p-4 text-body-sm text-tag-red-fg">
-          The case was created, but a document failed to upload. Check the storage settings and try again.
+        <p role="alert" className="flex items-start gap-2 rounded-lg bg-tag-red-bg p-4 text-body-sm text-tag-red-fg">
+          <TriangleExclamationPoint size={18} strokeWidth={1.8} className="mt-0.5 shrink-0" aria-hidden="true" />
+          <span>The case was created, but a document failed to upload. Check the storage settings and try again.</span>
         </p>
       ) : null}
 
@@ -122,7 +124,7 @@ function People({
     <Card>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 className="text-h5">People on this case</h2>
+          <h2 className="flex items-center gap-2 text-h5"><Users size={20} strokeWidth={1.8} className="text-steel" aria-hidden="true" />People on this case</h2>
           <p className="text-body-sm text-slate">Everyone here sees the whole case and everything anyone adds to it. What each person can add depends on their account type.</p>
         </div>
       </div>
@@ -237,7 +239,7 @@ function ProductTab({ c, consignee }: { c: CaseForUser; consignee: CaseConsignee
       <div className="grid gap-4 md:grid-cols-2">
         <ConsigneeCard c={c} consignee={consignee} />
         <Card>
-          <h2 className="mb-4 text-h5">Route and terms</h2>
+          <h2 className="mb-4 flex items-center gap-2 text-h5"><Route size={20} strokeWidth={1.8} className="text-steel" aria-hidden="true" />Route and terms</h2>
           <dl className="grid grid-cols-2 gap-3">
             <Detail label="Origin">{c.originPlace}</Detail>
             <Detail label="Port of export"><span className="font-mono">{c.exportPortCode}</span></Detail>
@@ -274,7 +276,7 @@ function ProductTab({ c, consignee }: { c: CaseForUser; consignee: CaseConsignee
 
       {c.hazmat || c.pharma || c.perishable ? (
         <Card>
-          <h2 className="mb-4 text-h5">Special cargo</h2>
+          <h2 className="mb-4 flex items-center gap-2 text-h5"><Package size={20} strokeWidth={1.8} className="text-steel" aria-hidden="true" />Special cargo</h2>
           <div className="flex flex-wrap gap-2">
             {c.hazmat ? <Tag tone="orange">Hazardous · {c.hazmat.unNumber} · Class {c.hazmat.hazardClass}</Tag> : null}
             {c.pharma ? <Tag tone="sky">Temperature {c.pharma.minC}°C to {c.pharma.maxC}°C</Tag> : null}
