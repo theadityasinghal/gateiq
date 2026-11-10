@@ -5,6 +5,8 @@ import { fieldVerification } from "@/db/schema";
 import { requireOnboardedUser } from "@/server/session";
 import { listCasesForOwner, listPendingInvites, listSharedCases, type CaseRow, type PendingInvite } from "@/server/cases/service";
 import { respondToInvite } from "@/server/cases/members";
+import { summarizeChecks, type CheckSummary } from "@/server/cases/checks";
+import type { Role } from "@/lib/roles";
 import { ROLE_INFO } from "@/lib/roles";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, tintBg } from "@/components/ui/card";
@@ -51,7 +53,7 @@ export default async function DashboardPage() {
 
       {invites.length ? <Invitations invites={invites} /> : null}
 
-      {user.role === "consignor" ? <OwnCases ownerId={user.id} /> : <SharedCases userId={user.id} tint={tintBg[info.tint]} />}
+      {user.role === "consignor" ? <OwnCases viewer={{ id: user.id, role: user.role }} /> : <SharedCases viewer={{ id: user.id, role: user.role }} tint={tintBg[info.tint]} />}
 
       <Card>
         <div className="mb-4 flex items-center justify-between gap-4">
@@ -104,8 +106,15 @@ function Invitations({ invites }: { invites: PendingInvite[] }) {
   );
 }
 
-async function OwnCases({ ownerId }: { ownerId: string }) {
-  const cases = await listCasesForOwner(ownerId);
+type Viewer = { id: string; role: Role };
+
+async function withChecks(cases: CaseRow[], viewer: Viewer) {
+  const sums = await Promise.all(cases.map((c) => summarizeChecks(c.caseCode, viewer)));
+  return Object.fromEntries(cases.map((c, i) => [c.id, sums[i]]));
+}
+
+async function OwnCases({ viewer }: { viewer: Viewer }) {
+  const cases = await listCasesForOwner(viewer.id);
   if (!cases.length) {
     return (
       <div className="rounded-lg bg-surface p-10 text-center">
@@ -117,16 +126,17 @@ async function OwnCases({ ownerId }: { ownerId: string }) {
       </div>
     );
   }
-  return <CaseTable cases={cases} />;
+  return <CaseTable cases={cases} checks={await withChecks(cases, viewer)} />;
 }
 
-async function SharedCases({ userId, tint }: { userId: string; tint: string }) {
-  const cases = await listSharedCases(userId);
+async function SharedCases({ viewer, tint }: { viewer: Viewer; tint: string }) {
+  const cases = await listSharedCases(viewer.id);
+  const checks = await withChecks(cases, viewer);
   return (
     <section className="space-y-4">
       <h2 className="text-h4">Cases shared with you</h2>
       {cases.length ? (
-        <CaseTable cases={cases} />
+        <CaseTable cases={cases} checks={checks} />
       ) : (
         <div className={`${tint} rounded-lg p-8 text-charcoal`}>
           <p className="max-w-[640px] text-body-sm">
@@ -138,16 +148,29 @@ async function SharedCases({ userId, tint }: { userId: string; tint: string }) {
   );
 }
 
-function CaseTable({ cases }: { cases: CaseRow[] }) {
+function ChecksCell({ s, caseCode }: { s: CheckSummary | null; caseCode: string }) {
+  if (!s || s.documents === 0) return <span className="text-steel">No documents yet</span>;
+  if (!s.toFix && !s.worthALook) return <Tag tone="green">No open issues</Tag>;
+  return (
+    <Link href={`/cases/${caseCode}?tab=checks`} className="flex flex-wrap items-center gap-1.5">
+      {s.toFix ? <Tag tone="red">{s.toFix} to fix</Tag> : null}
+      {s.worthALook ? <Tag tone="orange">{s.worthALook} to look at</Tag> : null}
+      {s.forYou ? <span className="text-caption font-medium text-charcoal">{s.forYou} for you</span> : null}
+    </Link>
+  );
+}
+
+function CaseTable({ cases, checks }: { cases: CaseRow[]; checks: Record<string, CheckSummary | null> }) {
   return (
     <div className="overflow-x-auto rounded-md border border-hairline">
-      <table className="w-full min-w-[640px] text-left text-body-sm">
+      <table className="w-full min-w-[760px] text-left text-body-sm">
         <thead className="bg-surface-soft text-caption text-steel">
           <tr>
             <th className="px-5 py-3 font-semibold">Case ID</th>
             <th className="px-5 py-3 font-semibold">Consignee</th>
             <th className="px-5 py-3 font-semibold">Route</th>
             <th className="px-5 py-3 font-semibold">Status</th>
+            <th className="px-5 py-3 font-semibold">Checks</th>
             <th className="px-5 py-3 font-semibold">Created</th>
           </tr>
         </thead>
@@ -171,6 +194,7 @@ function CaseTable({ cases }: { cases: CaseRow[] }) {
               <td className="px-5 py-4">
                 <Tag tone={c.status === "filed_baseline_ready" ? "green" : "orange"}>{CASE_STATUS_LABEL[c.status]}</Tag>
               </td>
+              <td className="px-5 py-4"><ChecksCell s={checks[c.id] ?? null} caseCode={c.caseCode} /></td>
               <td className="px-5 py-4 text-slate">{formatDate(c.createdAt)}</td>
             </tr>
           ))}

@@ -32,7 +32,15 @@ export type NewSubmission = {
   normalized?: unknown;
   provenance?: Record<string, string>;
   file?: File | null;
+  /**
+   * The adder's own earlier version that this one corrects. It is marked removed in the same transaction,
+   * and its files carry over unless a new file is attached.
+   */
+  supersedesId?: string | null;
 };
+
+/** The version being corrected was removed or replaced in the meantime. */
+export class SupersededError extends Error {}
 
 /**
  * Adds one submission (and its file, if any) to a case. The file goes to storage first; if the database
@@ -43,6 +51,24 @@ export async function storeSubmission(s: NewSubmission) {
   const rawSha256 = s.raw === undefined ? null : createHash("sha256").update(canonicalJson(s.raw)).digest("hex");
   try {
     return await db.transaction(async (tx) => {
+      let carried: Array<typeof caseDocument.$inferSelect> = [];
+      if (s.supersedesId) {
+        const replaced = await tx
+          .update(caseSubmission)
+          .set({ removedAt: new Date(), removedBy: s.actor.id })
+          .where(
+            and(
+              eq(caseSubmission.id, s.supersedesId),
+              eq(caseSubmission.caseId, s.caseId),
+              eq(caseSubmission.type, s.type),
+              eq(caseSubmission.addedBy, s.actor.id),
+              isNull(caseSubmission.removedAt),
+            ),
+          )
+          .returning({ id: caseSubmission.id });
+        if (!replaced.length) throw new SupersededError("The version being corrected is no longer current.");
+        if (!upload) carried = await tx.select().from(caseDocument).where(eq(caseDocument.submissionId, s.supersedesId));
+      }
       const [row] = await tx
         .insert(caseSubmission)
         .values({
@@ -57,8 +83,21 @@ export async function storeSubmission(s: NewSubmission) {
           rawSha256,
           normalized: s.normalized ?? null,
           provenance: s.provenance ?? null,
+          supersedesId: s.supersedesId ?? null,
         })
         .returning({ id: caseSubmission.id });
+      for (const d of carried) {
+        await tx.insert(caseDocument).values({
+          caseId: d.caseId,
+          submissionId: row.id,
+          storagePath: d.storagePath,
+          fileName: d.fileName,
+          mimeType: d.mimeType,
+          sizeBytes: d.sizeBytes,
+          sha256: d.sha256,
+          uploadedBy: d.uploadedBy,
+        });
+      }
       if (upload && s.file) {
         await tx.insert(caseDocument).values({
           caseId: s.caseId,
@@ -75,7 +114,7 @@ export async function storeSubmission(s: NewSubmission) {
       await audit(
         {
           actorId: s.actor.id,
-          action: "case.submission_added",
+          action: s.supersedesId ? "case.submission_corrected" : "case.submission_added",
           entityType: "case",
           entityId: s.caseId,
           details: {
@@ -87,6 +126,7 @@ export async function storeSubmission(s: NewSubmission) {
             documentNumber: s.documentNumber ?? null,
             rawSha256,
             fileSha256: upload?.sha256 ?? null,
+            supersedesId: s.supersedesId ?? null,
           },
         },
         tx,

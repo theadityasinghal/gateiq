@@ -17,7 +17,18 @@ import { ButtonLink } from "@/components/ui/button";
  * Everything everyone has added to the case, grouped by document type. Several of one type can sit side
  * by side (from different people, or corrected copies); none is treated as the right one.
  */
-export function DocumentsTab({ c, submissions, viewer }: { c: CaseForUser; submissions: Submission[]; viewer: { id: string; role: Role } }) {
+export function DocumentsTab({
+  c,
+  submissions,
+  viewer,
+  issues,
+}: {
+  c: CaseForUser;
+  submissions: Submission[];
+  viewer: { id: string; role: Role };
+  /** Open check issues per submission id. */
+  issues: Record<string, number>;
+}) {
   const addable = addableTypes(viewer.role);
   const byType = new Map<DocType, Submission[]>();
   for (const s of submissions) byType.set(s.type, [...(byType.get(s.type) ?? []), s]);
@@ -56,7 +67,7 @@ export function DocumentsTab({ c, submissions, viewer }: { c: CaseForUser; submi
               {list.length > 1 ? <span className="text-caption text-steel">Several copies; the gate compares them with each other.</span> : null}
             </div>
             {list.length ? (
-              list.map((s) => <SubmissionCard key={s.id} c={c} s={s} viewerId={viewer.id} />)
+              list.map((s) => <SubmissionCard key={s.id} c={c} s={s} viewerId={viewer.id} issues={issues[s.id] ?? 0} />)
             ) : (
               <p className="rounded-lg bg-surface p-6 text-body-sm text-slate">Nobody has added one yet.</p>
             )}
@@ -82,8 +93,9 @@ function Detail({ label, children }: { label: string; children: React.ReactNode 
   );
 }
 
-function SubmissionCard({ c, s, viewerId }: { c: CaseForUser; s: Submission; viewerId: string }) {
+function SubmissionCard({ c, s, viewerId, issues }: { c: CaseForUser; s: Submission; viewerId: string; issues: number }) {
   const mine = s.addedBy === viewerId;
+  const correctable = mine && s.normalized != null && DOC_TYPES[s.type].form === "structured";
   return (
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -93,6 +105,12 @@ function SubmissionCard({ c, s, viewerId }: { c: CaseForUser; s: Submission; vie
             {s.documentNumber ? <span className="font-mono text-[15px] font-medium text-charcoal">{s.documentNumber}</span> : null}
             {s.documentDate ? <span className="text-body-sm text-slate">{formatDate(s.documentDate)}</span> : null}
             <Tag tone="orange" title="Entered by a person; not fetched from the government system">Self-declared</Tag>
+            {s.supersedesId ? <Tag tone="gray" title="Replaces an earlier version the same person added">Corrected</Tag> : null}
+            {issues ? (
+              <a href={`/cases/${c.caseCode}?tab=checks`}>
+                <Tag tone="red" title="Open mismatches involving this document">{issues} {issues === 1 ? "issue" : "issues"}</Tag>
+              </a>
+            ) : null}
           </div>
           <p className="text-caption text-steel">
             Added by {s.adderName} {s.adderUsername ? <span className="font-mono">@{s.adderUsername}</span> : null}
@@ -101,10 +119,20 @@ function SubmissionCard({ c, s, viewerId }: { c: CaseForUser; s: Submission; vie
           </p>
         </div>
         {mine ? (
-          <form action={removeSubmission}>
-            <input type="hidden" name="submissionId" value={s.id} />
-            <button type="submit" className="min-h-10 rounded-sm px-3 py-2 text-[14px] font-medium text-error active:bg-surface">Remove</button>
-          </form>
+          <div className="flex items-center gap-1">
+            {correctable ? (
+              <a
+                href={`/cases/${c.caseCode}/documents/new/${docTypeSlug(s.type)}?correct=${s.id}`}
+                className="min-h-10 rounded-sm px-3 py-2 text-[14px] font-medium text-link-blue active:bg-surface"
+              >
+                Correct
+              </a>
+            ) : null}
+            <form action={removeSubmission}>
+              <input type="hidden" name="submissionId" value={s.id} />
+              <button type="submit" className="min-h-10 rounded-sm px-3 py-2 text-[14px] font-medium text-error active:bg-surface">Remove</button>
+            </form>
+          </div>
         ) : null}
       </div>
 

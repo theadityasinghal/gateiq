@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { requireOnboardedUser } from "@/server/session";
 import { getCaseForUser } from "@/server/cases/service";
+import { getOwnSubmissionForCorrection } from "@/server/cases/checks";
 import { getCurrencies, getMassUnits, getUqcUnits, masterStatus } from "@/server/masters";
 import { MastersNotice } from "@/components/masters-notice";
 import { DOC_TYPES, canAddDocument, docLabelInline, docTypeFromSlug } from "@/lib/documents";
@@ -12,7 +13,7 @@ import { DOC_FORMS, type OptionSource, type StaticOption } from "@/lib/doc-forms
 import { StructuredDocForm } from "./structured-doc-form";
 import { FileDocumentForm } from "./file-document-form";
 
-type Props = { params: Promise<{ code: string; type: string }> };
+type Props = { params: Promise<{ code: string; type: string }>; searchParams: Promise<{ correct?: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const type = docTypeFromSlug((await params).type);
@@ -45,8 +46,8 @@ async function loadOptions(): Promise<Record<OptionSource, StaticOption[]>> {
 
 const USES_MASTERS = new Set(["shipping_bill", "eway_bill", "commercial_invoice"]);
 
-export default async function AddDocumentPage({ params }: Props) {
-  const { code, type: slug } = await params;
+export default async function AddDocumentPage({ params, searchParams }: Props) {
+  const [{ code, type: slug }, { correct }] = await Promise.all([params, searchParams]);
   const type = docTypeFromSlug(slug);
   if (!type) notFound();
   const user = await requireOnboardedUser();
@@ -60,7 +61,9 @@ export default async function AddDocumentPage({ params }: Props) {
       <p className="text-micro-upper text-steel">
         <a href={back} className="font-mono text-link-blue">{c.caseCode}</a> · Documents
       </p>
-      <h1 className="mt-2 text-[32px] font-semibold leading-[1.2] tracking-[-0.5px] sm:text-h2">Add {docLabelInline(type)}</h1>
+      <h1 className="mt-2 text-[32px] font-semibold leading-[1.2] tracking-[-0.5px] sm:text-h2">
+        {correct ? "Correct" : "Add"} {docLabelInline(type)}
+      </h1>
     </>
   );
 
@@ -78,10 +81,28 @@ export default async function AddDocumentPage({ params }: Props) {
 
   let form: React.ReactNode;
   let notice: React.ReactNode = null;
+  const correcting = correct ? await getOwnSubmissionForCorrection(c.id, correct, user.id) : null;
+  if (correct && (!correcting || correcting.type !== type)) {
+    return (
+      <div className="mx-auto max-w-[960px]">
+        {header}
+        <p className="mt-4 max-w-[680px] text-slate">This document can&apos;t be corrected: it was removed, already corrected, or added by someone else.</p>
+        <ButtonLink href={back} variant="secondary" className="mt-6">Back to the case</ButtonLink>
+      </div>
+    );
+  }
   if (DOC_FORMS[type]) {
     const [options, status] = await Promise.all([loadOptions(), masterStatus()]);
     if (USES_MASTERS.has(type)) notice = <MastersNotice status={status} />;
-    form = <StructuredDocForm caseCode={c.caseCode} type={type} options={options} />;
+    form = (
+      <StructuredDocForm
+        caseCode={c.caseCode}
+        type={type}
+        options={options}
+        initial={correcting?.form}
+        hidden={correcting ? { supersedesId: correcting.id } : undefined}
+      />
+    );
   } else {
     form = <FileDocumentForm caseCode={c.caseCode} type={type} label={info.label} inlineLabel={docLabelInline(type)} />;
   }
@@ -91,7 +112,10 @@ export default async function AddDocumentPage({ params }: Props) {
       {header}
       <p className="mt-2 max-w-[680px] text-slate">
         {INTRO[type] ?? info.blurb} It will show on the case as added by you, a {ROLE_INFO[user.role].label}, and is marked{" "}
-        <span className="font-medium text-charcoal">self-declared</span>. You can remove it later, but not edit it.
+        <span className="font-medium text-charcoal">self-declared</span>.{" "}
+        {correcting
+          ? "Saving keeps the earlier version in the record trail and shows this one in its place. Its file carries over unless you attach a new one."
+          : "You can correct or remove it later; earlier versions stay in the record trail."}
       </p>
       {notice}
       {form}

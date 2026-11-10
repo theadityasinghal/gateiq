@@ -15,6 +15,8 @@ import { removeMember } from "@/server/cases/members";
 import { ROLE_INFO, invitableRoles } from "@/lib/roles";
 import { InviteForm } from "./invite-form";
 import { DocumentsTab } from "./documents-tab";
+import { ChecksTab } from "./checks-tab";
+import { getCheckReport } from "@/server/cases/checks";
 import { CASE_STATUS_LABEL, countryName, formatDate } from "@/lib/format";
 import { normalizeCaseCode } from "@/lib/case-id";
 import { SegmentedTabs } from "@/components/ui/tabs";
@@ -43,8 +45,10 @@ export default async function CasePage({ params, searchParams }: Props) {
     getUserHandle(c.ownerId),
     getCaseConsignee(c.id),
   ]);
+  const report = await getCheckReport(c, submissions, consignee, owner?.name ?? "Consignor");
+  const openIssues = report.counts.mismatch + report.counts.invalid + report.counts.warning;
   // "filing" was the tab's old name; old links still land on it.
-  const active = tab === "documents" || tab === "filing" ? "documents" : "product";
+  const active = tab === "documents" || tab === "filing" ? "documents" : tab === "checks" ? "checks" : "product";
   const base = `/cases/${c.caseCode}`;
 
   return (
@@ -84,11 +88,15 @@ export default async function CasePage({ params, searchParams }: Props) {
         tabs={[
           { key: "product", label: "Product info", href: `${base}?tab=product` },
           { key: "documents", label: "Documents", href: `${base}?tab=documents`, count: submissions.length },
+          { key: "checks", label: "Checks", href: `${base}?tab=checks`, count: openIssues || undefined },
         ]}
       />
 
       {active === "product" ? <ProductTab c={c} consignee={consignee} /> : null}
-      {active === "documents" ? <DocumentsTab c={c} submissions={submissions} viewer={{ id: user.id, role: user.role }} /> : null}
+      {active === "documents" ? (
+        <DocumentsTab c={c} submissions={submissions} viewer={{ id: user.id, role: user.role }} issues={report.bySubmission} />
+      ) : null}
+      {active === "checks" ? <ChecksTab caseCode={c.caseCode} report={report} /> : null}
     </div>
   );
 }

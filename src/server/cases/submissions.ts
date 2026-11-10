@@ -4,14 +4,14 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { caseSubmission, shipmentCase } from "@/db/schema";
+import { caseSubmission, checkAck, shipmentCase } from "@/db/schema";
 import { DOC_TYPES, canAddDocument, docLabelInline, isDocType, type DocType } from "@/lib/documents";
 import { ROLE_INFO } from "@/lib/roles";
 import { requireOnboardedUser } from "@/server/session";
 import { audit } from "@/server/audit";
 import { fileOrNull, parsePayload } from "./form-helpers";
 import { DOC_HANDLERS } from "./doc-handlers";
-import { fileProblem, refreshCaseStatus, storeSubmission } from "./submission-store";
+import { SupersededError, fileProblem, refreshCaseStatus, storeSubmission } from "./submission-store";
 import { getCaseForUser } from "./service";
 
 export type SubmissionFormState = {
@@ -43,6 +43,7 @@ async function trySave(s: Parameters<typeof storeSubmission>[0]): Promise<Submis
     await storeSubmission(s);
     return null;
   } catch (e) {
+    if (e instanceof SupersededError) return { error: "The version you were correcting has been removed or already corrected. Go back to the case and start again." };
     console.error("Saving submission failed", { caseCode: s.caseCode, type: s.type }, e);
     return { error: s.file ? "The file couldn't be uploaded. Please try again." : "This couldn't be saved. Please try again." };
   }
@@ -72,6 +73,8 @@ export async function submitDocument(caseCode: string, type: DocType, _prev: Sub
 
   const out = await handler.run(parsePayload(formData));
   if (!out.ok) return { error: out.error, fieldErrors: out.fieldErrors };
+  const supersedes = String(formData.get("supersedesId") ?? "");
+  const supersedesId = /^[0-9a-f-]{36}$/i.test(supersedes) ? supersedes : null;
 
   const failed = await trySave({
     caseId: c.id,
@@ -85,6 +88,7 @@ export async function submitDocument(caseCode: string, type: DocType, _prev: Sub
     normalized: out.normalized,
     provenance: out.provenance,
     file,
+    supersedesId,
   });
   if (failed) return failed;
   done(c.caseCode);
@@ -155,4 +159,27 @@ export async function removeSubmission(formData: FormData): Promise<void> {
   });
   revalidatePath(`/cases/${row.caseCode}`);
   revalidatePath("/dashboard");
+}
+
+/**
+ * Explains a disagreement without changing any document ("truck swapped at Bhiwandi, Part B updated").
+ * Anyone on the case may do it; the note and who wrote it show on the check. It lapses by itself as soon
+ * as the values involved change.
+ */
+export async function acknowledgeCheck(caseCode: string, _prev: { error?: string; ok?: boolean }, formData: FormData): Promise<{ error?: string; ok?: boolean }> {
+  const me = await requireOnboardedUser();
+  const c = await getCaseForUser(caseCode, me.id);
+  if (!c) return { error: "You don't have access to this case." };
+  const checkKey = String(formData.get("checkKey") ?? "").slice(0, 300);
+  const valuesKey = String(formData.get("valuesKey") ?? "").slice(0, 4000);
+  const note = String(formData.get("note") ?? "").trim();
+  if (!checkKey || !valuesKey) return { error: "Missing check." };
+  if (note.length < 5) return { error: "Say briefly why this is fine (at least a few words)." };
+  if (note.length > 500) return { error: "Keep the note under 500 characters." };
+  await db.transaction(async (tx) => {
+    await tx.insert(checkAck).values({ caseId: c.id, checkKey, valuesKey, note, userId: me.id });
+    await audit({ actorId: me.id, action: "case.check_acknowledged", entityType: "case", entityId: c.id, details: { caseCode: c.caseCode, checkKey, note } }, tx);
+  });
+  revalidatePath(`/cases/${c.caseCode}`);
+  return { ok: true };
 }

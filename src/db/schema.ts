@@ -286,11 +286,40 @@ export const caseSubmission = pgTable(
     /** The standard record built from raw, and where each field came from. Null for a plain upload. */
     normalized: jsonb("normalized"),
     provenance: jsonb("provenance").$type<Record<string, string>>(),
+    /** The earlier version this one corrects. Saving a correction marks that version removed. */
+    supersedesId: uuid("supersedes_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     removedAt: timestamp("removed_at", { withTimezone: true }),
     removedBy: text("removed_by").references(() => user.id),
   },
-  (t) => [index("case_submission_case_type_idx").on(t.caseId, t.type), index("case_submission_added_by_idx").on(t.addedBy)],
+  (t) => [
+    index("case_submission_case_type_idx").on(t.caseId, t.type),
+    index("case_submission_added_by_idx").on(t.addedBy),
+    index("case_submission_supersedes_idx").on(t.supersedesId),
+  ],
+);
+
+/**
+ * Someone on the case looked at a disagreement and explained it ("truck swapped at Bhiwandi, Part B
+ * updated"). It holds only while the disagreement stays exactly the same (`values_key`); any change to
+ * the values or the documents involved brings the check back.
+ */
+export const checkAck = pgTable(
+  "check_ack",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => shipmentCase.id, { onDelete: "cascade" }),
+    checkKey: text("check_key").notNull(),
+    valuesKey: text("values_key").notNull(),
+    note: text("note").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("check_ack_case_idx").on(t.caseId)],
 );
 
 /* ───────────── Audit ───────────── */

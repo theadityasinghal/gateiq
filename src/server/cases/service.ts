@@ -161,6 +161,7 @@ export async function listSubmissions(c: { id: string; ownerId: string }) {
         documentDate: caseSubmission.documentDate,
         normalized: caseSubmission.normalized,
         provenance: caseSubmission.provenance,
+        supersedesId: caseSubmission.supersedesId,
         createdAt: caseSubmission.createdAt,
         adderName: adder.name,
         adderUsername: adder.username,
