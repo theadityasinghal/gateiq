@@ -100,12 +100,20 @@ export default async function AddDocumentPage({ params, searchParams }: Props) {
     const [options, status] = await Promise.all([loadOptions(), masterStatus()]);
     if (USES_MASTERS.has(type)) notice = <MastersNotice status={status} />;
     form = correcting ? (
-      <StructuredDocForm caseCode={c.caseCode} type={type} options={options} initial={correcting.form} hidden={{ supersedesId: correcting.id }} />
+      <StructuredDocForm
+        caseCode={c.caseCode}
+        type={type}
+        options={options}
+        initial={correcting.form}
+        hidden={{ supersedesId: correcting.id }}
+        submitLabel="Save correction"
+        attachNote={null}
+      />
     ) : (
       <DocEntry
         caseCode={c.caseCode}
         type={type}
-        label={info.label}
+        label={docLabelInline(type)}
         options={options}
         canRead={geminiConfigured()}
         hasQr={type === "commercial_invoice" || type === "eway_bill"}

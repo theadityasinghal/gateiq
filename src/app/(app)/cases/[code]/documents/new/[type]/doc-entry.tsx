@@ -73,7 +73,7 @@ export function DocEntry({
     }
     const qrText = await decodeQrFromFile(file);
     setPreview({ url: URL.createObjectURL(file), isPdf: file.type === "application/pdf" });
-    setStep(canRead ? "Reading the document… this takes up to half a minute." : "Reading the QR code…");
+    setStep(canRead ? "Reading the document… this can take up to a minute." : "Reading the QR code…");
     const fd = new FormData();
     fd.set("file", file);
     if (qrText) fd.set("qrText", qrText);
@@ -107,7 +107,7 @@ export function DocEntry({
             ) : (
               <a href={preview.url} target="_blank" rel="noreferrer" className="mt-4 block">
                 {/* eslint-disable-next-line @next/next/no-img-element -- a local blob preview, not a remote image */}
-                <img src={preview.url} alt={`The ${label.toLowerCase()} you uploaded`} className="max-h-[420px] rounded-md border border-hairline object-contain" />
+                <img src={preview.url} alt={`The ${label} you uploaded`} className="max-h-[420px] rounded-md border border-hairline object-contain" />
               </a>
             )
           ) : null}
@@ -141,10 +141,10 @@ export function DocEntry({
       {mode === "read" ? (
         <Card>
           <SectionTitle
-            title={`Read the ${label.toLowerCase()}`}
+            title={`Read the ${label}`}
             description={
               canRead
-                ? `Upload a photo or PDF. ${hasQr ? "A QR code on it is read first and exactly; " : ""}the rest is read by Gemini, and you check every field before saving.`
+                ? `Upload a photo or PDF. ${hasQr ? "A QR code on it is read first, exactly; the rest" : "It"} is read by Gemini, and you check every field before saving.`
                 : "Upload a PDF or photo with its QR code visible. Only the QR code can be read here; type the rest in."
             }
           />

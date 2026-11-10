@@ -115,10 +115,14 @@ export const DOC_TYPES: Record<DocType, { label: string; short: string; form: Do
   },
 };
 
-/** The label for use mid-sentence: "e-way bill", "packing list", but "MSDS" stays as it is. */
+/**
+ * The label for use mid-sentence: "e-way bill", "e-seal record", "packing list". Acronyms ("MSDS",
+ * "VGM declaration") and names with a number ("Form-13") stay as they are.
+ */
 export function docLabelInline(type: DocType): string {
   const l = DOC_TYPES[type].label;
-  return /^[A-Z][a-z]/.test(l) ? l.charAt(0).toLowerCase() + l.slice(1) : l;
+  if (/\d/.test(l)) return l;
+  return /^[A-Z]([a-z]|-[a-z])/.test(l) ? l.charAt(0).toLowerCase() + l.slice(1) : l;
 }
 
 export function isDocType(value: unknown): value is DocType {

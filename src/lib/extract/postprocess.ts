@@ -6,7 +6,7 @@
  */
 import { GSTIN_RE, VEHICLE_RE } from "@/lib/case-schema";
 import { DOC_FORMS, LOW_CONFIDENCE, type FieldMeta, type FieldSpec } from "@/lib/doc-forms";
-import { DOC_TYPES, type DocType } from "@/lib/documents";
+import { docLabelInline, type DocType } from "@/lib/documents";
 import { hasContainerFormat, isValidContainerNo, normalizeContainerNo, suggestContainerNo } from "@/lib/iso6346";
 import { gstinCheckChar } from "@/lib/verify/identifiers";
 import { qrAppliesTo, qrDateToIso, type QrReading } from "@/lib/qr/parse";
@@ -136,7 +136,7 @@ export function offerFromReading(type: DocType, output: unknown, qr: QrReading |
 
   let warning: string | null = null;
   if (o.isExpectedType === false) {
-    warning = `This doesn't look like a ${DOC_TYPES[type].label.toLowerCase()}${typeof o.documentLooksLike === "string" && o.documentLooksLike ? `; it looks like ${o.documentLooksLike}` : ""}. Check you picked the right file.`;
+    warning = `This doesn't look like a ${docLabelInline(type)}${typeof o.documentLooksLike === "string" && o.documentLooksLike ? `; it looks like ${o.documentLooksLike}` : ""}. Check you picked the right file.`;
   }
   return { initial, meta, warning, qrExtras };
 }

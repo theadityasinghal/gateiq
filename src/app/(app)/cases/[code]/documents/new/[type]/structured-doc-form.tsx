@@ -43,6 +43,7 @@ export function StructuredDocForm({
   hidden,
   showAttach = true,
   attachNote,
+  submitLabel,
 }: {
   caseCode: string;
   type: DocType;
@@ -53,6 +54,7 @@ export function StructuredDocForm({
   hidden?: Record<string, string>;
   showAttach?: boolean;
   attachNote?: React.ReactNode;
+  submitLabel?: string;
 }) {
   const spec = DOC_FORMS[type]!;
   const [state, action, pending] = useActionState<SubmissionFormState, FormData>(submitDocument.bind(null, caseCode, type), {});
@@ -164,7 +166,7 @@ export function StructuredDocForm({
         <p role="alert" className="text-body-sm text-error">{state.error ?? "Some fields need attention. They are marked above."}</p>
       ) : null}
       <div className="flex justify-end">
-        <Button type="submit" disabled={pending}>{pending ? "Saving…" : spec.submitLabel}</Button>
+        <Button type="submit" disabled={pending}>{pending ? "Saving…" : submitLabel ?? spec.submitLabel}</Button>
       </div>
     </form>
   );

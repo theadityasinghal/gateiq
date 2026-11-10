@@ -62,8 +62,8 @@ export function extractionSchema(type: DocType) {
     } else {
       fields[s.key] = {
         type: "array",
+        // No maxItems: Gemini rejects large limits. Rows beyond the form's maximum are dropped afterwards.
         description: `${s.title}: one entry per ${s.itemLabel.toLowerCase()} on the document, in order.`,
-        maxItems: s.max,
         items: {
           type: "object",
           properties: Object.fromEntries(s.fields.map((f) => [f.key, cell(f)])),
