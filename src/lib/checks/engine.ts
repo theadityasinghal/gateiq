@@ -116,9 +116,9 @@ function compareFact(fact: FactKey, claims: Claim[], scopeKey: string, opts: { s
 
   if (groups.length === 1) {
     if (distinctSources.length === 1) {
-      return { ...base, status: "single", message: `Only ${distinctSources[0].label} gives this so far; nothing to compare yet.`, owners: [] };
+      return { ...base, status: "single", message: "One source so far.", owners: [] };
     }
-    return { ...base, status: "agree", message: `${distinctSources.length} sources agree.`, owners: [] };
+    return { ...base, status: "agree", message: "All agree.", owners: [] };
   }
 
   // Disagreement. Soften it when it is only "close" or only loose sources differ.
@@ -129,13 +129,13 @@ function compareFact(fact: FactKey, claims: Claim[], scopeKey: string, opts: { s
   const strictGroups = groupClaims(fact, strict);
   if (allClose) {
     status = "warning";
-    message = `${spec.label}: written differently, probably the same. Worth a look.`;
+    message = "Written differently; probably the same.";
   } else if (strict.length && strictGroups.length === 1) {
     status = "warning";
-    message = `${spec.label}: only the lorry receipt's charged weight differs. Charged weight is often rounded up for billing.`;
+    message = "Only the LR's charged weight differs (often rounded up for billing).";
   } else if (opts.softVehicle) {
     status = "warning";
-    message = "More than one truck is named. That's expected if the containers travel on different trucks; otherwise check Part B.";
+    message = "Several trucks: fine if the containers travel separately, otherwise check Part B.";
   }
   return { ...base, status, message, owners: ownersOf(distinctSources) };
 }
@@ -183,7 +183,7 @@ export function runChecks(input: {
           fact: "derived.checkDigit",
           label: "Check digit",
           status: "invalid",
-          message: `${formatContainerNo(n)} fails the ISO 6346 check digit, so it was almost certainly mistyped${sugg.length ? `. One slip away: ${sugg.map(formatContainerNo).join(", ")}` : ""}.`,
+          message: `Fails the ISO 6346 check digit: almost certainly mistyped.${sugg.length ? ` Did it mean ${sugg.map(formatContainerNo).join(" / ")}?` : ""}`,
           groups: [{ display: formatContainerNo(n), sources }],
           owners: ownersOf(sources),
         }),
@@ -201,7 +201,7 @@ export function runChecks(input: {
             fact: "derived.minLaden",
             label: "VGM below a laden minimum",
             status: "warning",
-            message: `${v.source.label} gives ${v.vgmT.toFixed(3)} t. A laden ${len ?? 20}-foot container weighs at least ${min} t at the terminal, so this is probably in the wrong unit.`,
+            message: `Below the ${min} t a laden ${len ?? 20}-ft container weighs: probably the wrong unit.`,
             groups: [{ display: `${v.vgmT.toFixed(3)} t`, sources: [v.source] }],
             owners: [v.source.role],
           }),
@@ -256,8 +256,8 @@ export function runChecks(input: {
           label: "VGM less tare vs shipping bill",
           status: within ? "agree" : estimated ? "warning" : "mismatch",
           message: within
-            ? `VGM less tare (${cargoT.toFixed(3)} t) is within 1 t per container of the shipping bill's gross weight (${sb.grossT.toFixed(3)} t).`
-            : `VGM less tare comes to ${cargoT.toFixed(3)} t, but the shipping bill says ${sb.grossT.toFixed(3)} t gross: ${diff.toFixed(3)} t apart.${estimated ? " The tare was estimated from the container size; add the tare from the door to be sure." : ""}`,
+            ? "Within 1 t per container."
+            : `${diff.toFixed(3)} t apart (limit 1 t per container).${estimated ? " Tare estimated from the size: add it from the container door." : ""}`,
           groups: [
             { display: `${cargoT.toFixed(3)} t (VGM − tare${estimated ? ", tare estimated" : ""})`, sources: dedupeSources(sources.slice(1)) },
             { display: `${sb.grossT.toFixed(3)} t (gross)`, sources: [sb.source] },
@@ -276,7 +276,7 @@ export function runChecks(input: {
           fact: "derived.ewbValidity",
           label: "E-way bill validity",
           status: "mismatch",
-          message: `${e.source.label} expired on ${e.validUntil}. A truck moving on it can be detained; extend it (within 8 hours of expiry) or generate a new one.`,
+          message: "Expired: extend it within 8 h of expiry or generate a new one. A truck moving on it can be detained.",
           groups: [{ display: `Valid until ${e.validUntil}`, sources: [e.source] }],
           owners: [e.source.role],
         }),
@@ -288,7 +288,7 @@ export function runChecks(input: {
           fact: "derived.ewbValidity",
           label: "E-way bill validity",
           status: "warning",
-          message: `${e.source.label} expires today. If the truck won't reach the port in time, extend it (from 8 hours before expiry).`,
+          message: "Expires today: extend it from 8 h before expiry if the truck won't arrive in time.",
           groups: [{ display: `Valid until ${e.validUntil}`, sources: [e.source] }],
           owners: [e.source.role],
         }),
@@ -301,7 +301,7 @@ export function runChecks(input: {
           fact: "derived.ewbPartB",
           label: "E-way bill Part B",
           status: "warning",
-          message: `${e.source.label} has no vehicle (Part B). It isn't valid for road movement until the truck number is added.`,
+          message: "No vehicle yet: not valid on the road until Part B is filled in.",
           groups: [{ display: "No vehicle", sources: [e.source] }],
           owners: [e.source.role],
         }),

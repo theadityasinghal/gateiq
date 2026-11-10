@@ -7,6 +7,8 @@ import { listCasesForOwner, listPendingInvites, listSharedCases, type CaseRow, t
 import { respondToInvite } from "@/server/cases/members";
 import { summarizeChecks, type CheckSummary } from "@/server/cases/checks";
 import type { Role } from "@/lib/roles";
+import { Wrench } from "lucide-react";
+import { StatusCount, StatusIcon } from "@/components/ui/status";
 import { ROLE_INFO } from "@/lib/roles";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, tintBg } from "@/components/ui/card";
@@ -149,13 +151,18 @@ async function SharedCases({ viewer, tint }: { viewer: Viewer; tint: string }) {
 }
 
 function ChecksCell({ s, caseCode }: { s: CheckSummary | null; caseCode: string }) {
-  if (!s || s.documents === 0) return <span className="text-steel">No documents yet</span>;
-  if (!s.toFix && !s.worthALook) return <Tag tone="green">No open issues</Tag>;
+  if (!s || s.documents === 0) return <span className="text-stone" title="No documents yet">–</span>;
+  if (!s.toFix && !s.worthALook) return <StatusIcon kind="agree" />;
   return (
-    <Link href={`/cases/${caseCode}?tab=checks`} className="flex flex-wrap items-center gap-1.5">
-      {s.toFix ? <Tag tone="red">{s.toFix} to fix</Tag> : null}
-      {s.worthALook ? <Tag tone="orange">{s.worthALook} to look at</Tag> : null}
-      {s.forYou ? <span className="text-caption font-medium text-charcoal">{s.forYou} for you</span> : null}
+    <Link href={`/cases/${caseCode}?tab=checks`} className="flex flex-wrap items-center gap-3">
+      <StatusCount kind="mismatch" n={s.toFix} />
+      <StatusCount kind="warning" n={s.worthALook} />
+      {s.forYou ? (
+        <span className="inline-flex items-center gap-1 text-caption font-semibold text-charcoal" title={`${s.forYou} you can fix`}>
+          <Wrench size={14} strokeWidth={1.8} aria-label="Yours to fix" role="img" />
+          {s.forYou}
+        </span>
+      ) : null}
     </Link>
   );
 }
@@ -167,10 +174,10 @@ function CaseTable({ cases, checks }: { cases: CaseRow[]; checks: Record<string,
         <thead className="bg-surface-soft text-caption text-steel">
           <tr>
             <th className="px-5 py-3 font-semibold">Case ID</th>
+            <th className="px-5 py-3 font-semibold">Checks</th>
             <th className="px-5 py-3 font-semibold">Consignee</th>
             <th className="px-5 py-3 font-semibold">Route</th>
             <th className="px-5 py-3 font-semibold">Status</th>
-            <th className="px-5 py-3 font-semibold">Checks</th>
             <th className="px-5 py-3 font-semibold">Created</th>
           </tr>
         </thead>
@@ -180,6 +187,7 @@ function CaseTable({ cases, checks }: { cases: CaseRow[]; checks: Record<string,
               <td className="px-5 py-4">
                 <Link href={`/cases/${c.caseCode}`} className="font-mono font-medium text-link-blue">{c.caseCode}</Link>
               </td>
+              <td className="px-5 py-4"><ChecksCell s={checks[c.id] ?? null} caseCode={c.caseCode} /></td>
               <td className="px-5 py-4 text-charcoal">
                 {c.consigneeUsername ? (
                   <>
@@ -194,7 +202,6 @@ function CaseTable({ cases, checks }: { cases: CaseRow[]; checks: Record<string,
               <td className="px-5 py-4">
                 <Tag tone={c.status === "filed_baseline_ready" ? "green" : "orange"}>{CASE_STATUS_LABEL[c.status]}</Tag>
               </td>
-              <td className="px-5 py-4"><ChecksCell s={checks[c.id] ?? null} caseCode={c.caseCode} /></td>
               <td className="px-5 py-4 text-slate">{formatDate(c.createdAt)}</td>
             </tr>
           ))}

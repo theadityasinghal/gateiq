@@ -8,7 +8,9 @@ This phase covers:
 - **A permanent username** chosen at sign-up, then **one of 11 account types**, then a role-specific profile. Each identity field shows a verification badge: *owned*, *exists*, *format valid*, *self-declared* or *invalid*.
 - **Case creation by the consignor:** route, goods lines, and special cargo (hazmat with MSDS, pharma temperature range, perishable certificates). Each case gets a Case ID like `GIQ-26-7K3M9Q2X`, with a check character that catches typos.
 - **Inviting people to a case by username.** Each account type can invite only the next ones down the line: consignor → consignee, CHA, transporter; CHA → transporter; transporter → driver. Officials are never invited. Invites show on the invitee's dashboard; once accepted they can view the case. The owner or the inviter can remove someone, which also removes everyone that person invited. A case has at most one consignee, whose company name is compared with the shipping bill.
-- **Recording the shipping bill** as the *Filed baseline*. The raw entry is kept append-only and hashed, normalised (units to tonnes, dates, names, HS codes), versioned, and compared line by line with the declared case.
+- **Recording every document field by field:** shipping bill (with its container block), e-way bill, lorry receipt, Form-13, VGM declaration, e-seal record, invoice and packing list. Each raw entry is kept append-only and hashed, normalised (units to tonnes, dates, names, HS codes, container numbers), and can be corrected; earlier versions stay in the record trail.
+- **Reading documents from photos and PDFs.** A QR code (GST e-invoice, e-way bill) is decoded in the browser first; the rest is read by Gemini into the same form, and the adder confirms every field before it is saved.
+- **Cross-document checks** (`src/lib/checks/`): every fact (container and seal numbers, vehicle, shipping bill and invoice numbers, IEC, GSTIN, HS codes, packages, weights, consignee) is compared across all documents and the case, per container. Container numbers are checked against their ISO 6346 check digit; VGM less tare is compared with the shipping bill's gross weight; e-way bill expiry and Part B are watched. No document is treated as right: a mismatch shows who said what and who can fix it, and anyone on the case can explain an expected one.
 
 ULIP (direct ICEGATE / e-way bill lookups) is not connected yet. Every filing goes through the `FilingSource` interface (`src/server/filings/`), so a `UlipFilingSource` can be added later without touching the rest of the pipeline.
 
@@ -24,7 +26,7 @@ The visual design follows the tokens in `DESIGN.md`.
    - Copy the **connection pooler** URI into `SUPABASE_DB`. The direct host `db.<ref>.supabase.co` is IPv6-only and fails on most IPv4 networks.
    - In Storage, create a **private** bucket named `case-documents`.
    - Copy the project URL into `SUPABASE_URL` and the secret key into `SUPABASE_SECRET_KEY`.
-2. **Environment:** copy `.env.example` to `.env.local` and fill it in. Generate `BETTER_AUTH_SECRET` with `openssl rand -base64 32`. `.env.example` is the committed template with placeholders; `.env.local` holds your real values and is git-ignored.
+2. **Environment:** copy `.env.example` to `.env.local` and fill it in. `GEMINI_API_KEY` is optional: without it only QR codes are read and the rest is typed in. Generate `BETTER_AUTH_SECRET` with `openssl rand -base64 32`. `.env.example` is the committed template with placeholders; `.env.local` holds your real values and is git-ignored.
 3. **Database and reference data:**
 
 ```bash
@@ -60,7 +62,7 @@ The app, migrations and import scripts all use the one `SUPABASE_DB` connection 
 
 | Script | What it does |
 |---|---|
-| `npm test` | Unit tests: validators, Case ID, normaliser, diff, CSV parser |
+| `npm test` | Unit tests: validators, Case ID, normalisers, ISO 6346, checks engine, QR parsing, extraction |
 | `npm run typecheck` | TypeScript check |
 | `npm run db:generate` | Generate a migration after changing `src/db/schema.ts` |
 | `npm run db:migrate` | Apply migrations |

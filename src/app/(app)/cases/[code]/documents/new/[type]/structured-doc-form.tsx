@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { Card, SectionTitle } from "@/components/ui/card";
-import { Tag } from "@/components/ui/badge";
+import { CircleCheck, CircleX, QrCode, ScanText, TriangleExclamationPoint } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { DocType } from "@/lib/documents";
 import {
@@ -17,7 +17,7 @@ import {
   type OptionSource,
   type StaticOption,
 } from "@/lib/doc-forms";
-import { hasContainerFormat, isValidContainerNo, normalizeContainerNo, suggestContainerNo } from "@/lib/iso6346";
+import { hasContainerFormat, isValidContainerNo, suggestContainerNo } from "@/lib/iso6346";
 import { submitDocument, type SubmissionFormState } from "@/server/cases/submissions";
 import { AttachFile } from "./attach-file";
 
@@ -110,7 +110,7 @@ export function StructuredDocForm({
         error={err(id)}
         hint={f.kind === "container" ? <ContainerHint value={value} /> : m?.problem ?? f.hint}
         aside={<MetaTag m={m} />}
-        className={cn(SPAN[f.span ?? 1], m && needsLook(m) && "rounded-md bg-tint-peach/60 p-2 -m-2")}
+        className={cn(SPAN[f.span ?? 1], m && needsLook(m) && "rounded-md ring-1 ring-tag-orange-fg/40 ring-offset-4 ring-offset-canvas")}
       >
         {control(f, id, value, onChange)}
       </Field>
@@ -176,29 +176,40 @@ function needsLook(m: FieldMeta) {
   return !!m.problem || (m.source === "model" && (m.confidence ?? 0) < LOW_CONFIDENCE);
 }
 
+/** Where a pre-filled value came from, as one icon beside the label; the details are in the tooltip. */
 function MetaTag({ m }: { m?: FieldMeta }) {
   if (!m) return null;
-  if (m.source === "qr") return <Tag tone="sky" title="Decoded from the QR code printed on the document">From QR</Tag>;
-  if (needsLook(m)) {
-    return (
-      <Tag tone="orange" title={m.asWritten ? `Read as: ${m.asWritten}` : "The reading is uncertain"}>
-        Check this
-      </Tag>
-    );
-  }
-  return <Tag tone="gray" title={m.asWritten ? `Read as: ${m.asWritten}` : undefined}>Read from file</Tag>;
+  const [Icon, color, title] =
+    m.source === "qr"
+      ? [QrCode, "text-tag-sky-fg", "From the QR code: exact"]
+      : needsLook(m)
+        ? [TriangleExclamationPoint, "text-tag-orange-fg", [m.problem ?? "Uncertain reading: compare with the paper", m.asWritten ? `Read as: ${m.asWritten}` : ""].filter(Boolean).join(" · ")]
+        : [ScanText, "text-stone", m.asWritten ? `Read from the file as: ${m.asWritten}` : "Read from the file"];
+  return (
+    <span title={title} className={color}>
+      <Icon size={15} strokeWidth={1.8} aria-label={title} role="img" />
+    </span>
+  );
 }
 
 /** Live ISO 6346 check while typing. A failing number can still be saved: it is what the paper says. */
 function ContainerHint({ value }: { value: string }) {
-  if (!value.trim()) return <>4 letters and 7 digits, as painted on the door.</>;
-  if (!hasContainerFormat(value)) return <>4 letters and 7 digits, as painted on the door.</>;
-  if (isValidContainerNo(value)) return <span className="text-tag-green-fg">Check digit is right.</span>;
+  if (!value.trim() || !hasContainerFormat(value)) return <>4 letters, 7 digits</>;
+  if (isValidContainerNo(value)) {
+    return (
+      <span className="inline-flex items-center gap-1 text-tag-green-fg">
+        <CircleCheck size={14} strokeWidth={1.8} aria-hidden="true" /> Check digit OK
+      </span>
+    );
+  }
   const s = suggestContainerNo(value);
   return (
-    <span className="text-tag-orange-fg">
-      The check digit doesn&apos;t match ({normalizeContainerNo(value)}).
-      {s.length ? <> Did the paper mean {s.join(" or ")}? If the paper really says this, keep it: the checks will flag it.</> : null}
+    <span
+      className="inline-flex items-start gap-1 text-tag-orange-fg"
+      title={`${s.length ? `One slip away: ${s.join(", ")}. ` : ""}Keep it if the paper really says this: the checks will flag it.`}
+    >
+      <CircleX size={14} strokeWidth={1.8} className="mt-0.5 shrink-0" aria-hidden="true" />
+      <span>Check digit fails{s.length ? <> · <span className="font-mono">{s[0]}</span>?</> : null}</span>
     </span>
   );
 }

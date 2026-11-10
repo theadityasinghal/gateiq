@@ -38,7 +38,8 @@ describe("ISO 6346 container numbers", () => {
 
   it("rejects a terminal manual's sample number and suggests the fix", () => {
     expect(isValidContainerNo("MSKU9998010")).toBe(false);
-    expect(suggestContainerNo("MSKU9998010")[0]).toBe("MSKU9998019");
+    expect(suggestContainerNo("MSKU9998010")).toContain("MSKU9998019");
+    expect(suggestContainerNo("CSQU3045383")[0]).toBe("CSQU3054383"); // a swap is the likeliest slip
   });
 
   it("finds a single wrong serial digit or a swap", () => {

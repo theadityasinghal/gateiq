@@ -25,18 +25,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: type ? `Add ${docLabelInline(type)}` : "Add document" };
 }
 
+/** One line on what to copy from; what each field is compared with shows on the Checks tab. */
 const INTRO: Partial<Record<keyof typeof DOC_TYPES, string>> = {
-  shipping_bill:
-    "Type the details exactly as they appear on the ICEGATE filing, not as they were entered in this case. Others on the case may add their own copy; GateIQ keeps every one and later shows where they disagree.",
-  eway_bill:
-    "Type the details exactly as they appear on the e-way bill from the GST portal. The vehicle number (Part B) is optional; if it changes, add the updated e-way bill as another entry.",
-  lorry_receipt: "Type the details from the lorry receipt you issued for this consignment. The vehicle number is checked against the e-way bill and the truck at the gate.",
-  form_13: "Type the e-Form-13 the shipping line issued for one container. Its container, seal and VGM are checked against the shipping bill, e-seal record and VGM declaration.",
-  vgm_declaration: "Type the VGM declaration given to the shipping line. Each container's VGM, less its tare, is compared with the shipping bill's gross weight.",
-  e_seal: "Type what was uploaded through the e-seal vendor's app. The seal ties the container number to the shipping bill and the truck.",
-  commercial_invoice: "Type the invoice as printed. Its number, date, GSTIN and HS codes are compared with the shipping bill and e-way bill.",
-  packing_list: "Type the totals from the packing list. Packages and weight are compared with the shipping bill and lorry receipt.",
-};
+  shipping_bill: "As filed on ICEGATE, not as entered in this case.",
+  eway_bill: "As generated on the GST portal. Part B can be added later as a new entry.",
+  lorry_receipt: "The LR you issued for this consignment.",
+  form_13: "One per container, as issued by the shipping line.",
+  vgm_declaration: "As given to the shipping line. VGM includes the empty container.",
+  e_seal: "As uploaded through the e-seal vendor's app.",
+  commercial_invoice: "As printed on the invoice.",
+  packing_list: "The totals from the packing list.",
+}
 
 /** Codes used in currencies are loaded from the masters; masters that aren't imported give empty lists. */
 async function loadOptions(): Promise<Record<OptionSource, StaticOption[]>> {
@@ -127,11 +126,8 @@ export default async function AddDocumentPage({ params, searchParams }: Props) {
     <div className="mx-auto max-w-[960px]">
       {header}
       <p className="mt-2 max-w-[680px] text-slate">
-        {INTRO[type] ?? info.blurb} It will show on the case as added by you, a {ROLE_INFO[user.role].label}, and is marked{" "}
-        <span className="font-medium text-charcoal">self-declared</span>.{" "}
-        {correcting
-          ? "Saving keeps the earlier version in the record trail and shows this one in its place. Its file carries over unless you attach a new one."
-          : "You can correct or remove it later; earlier versions stay in the record trail."}
+        {INTRO[type] ?? info.blurb}
+        {correcting ? " The earlier version stays in the record trail; its file carries over unless you attach a new one." : null}
       </p>
       {notice}
       {form}

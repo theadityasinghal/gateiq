@@ -9,9 +9,11 @@ import type { NormalizedLorryReceipt } from "@/lib/normalize/lorry-receipt";
 import type { NormalizedESeal, NormalizedForm13, NormalizedVgm } from "@/lib/normalize/port-docs";
 import type { NormalizedInvoice, NormalizedPackingList } from "@/lib/normalize/commercial-docs";
 import { formatContainerNo, isValidContainerNo } from "@/lib/iso6346";
+import { ChevronDown, FileText, History, Keyboard, Paperclip, Pencil, Plus, Route, ScanText, Trash, UserX } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { StatusCount, iconButtonClass } from "@/components/ui/status";
 import { Tag } from "@/components/ui/badge";
-import { ButtonLink } from "@/components/ui/button";
+import { buttonClass } from "@/components/ui/button";
 
 /**
  * Everything everyone has added to the case, grouped by document type. Several of one type can sit side
@@ -32,54 +34,46 @@ export function DocumentsTab({
   const addable = addableTypes(viewer.role);
   const byType = new Map<DocType, Submission[]>();
   for (const s of submissions) byType.set(s.type, [...(byType.get(s.type) ?? []), s]);
-  const shown = DOC_TYPE_KEYS.filter((t) => byType.has(t) || addable.includes(t));
-  const missing = DOC_TYPE_KEYS.filter((t) => !shown.includes(t));
+  const shown = DOC_TYPE_KEYS.filter((t) => byType.has(t));
 
   return (
-    <div className="space-y-10">
-      <Card>
-        <h2 className="text-h5">Add a document</h2>
-        {addable.length ? (
-          <>
-            <p className="mt-1 text-body-sm text-slate">
-              As a {ROLE_INFO[viewer.role].label} you can add these. Everyone on the case sees what you add, and you can remove only your own.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {addable.map((t) => (
-                <ButtonLink key={t} href={`/cases/${c.caseCode}/documents/new/${docTypeSlug(t)}`} variant="secondary">
-                  + {DOC_TYPES[t].label}
-                </ButtonLink>
-              ))}
-            </div>
-          </>
-        ) : (
-          <p className="mt-1 text-body-sm text-slate">A {ROLE_INFO[viewer.role].label} doesn&apos;t add documents at this stage. You can see everything the others add.</p>
-        )}
-      </Card>
-
-      {shown.map((t) => {
-        const list = byType.get(t) ?? [];
-        return (
-          <section key={t} className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-h4">{DOC_TYPES[t].label}</h2>
-              <Tag tone="gray">{list.length}</Tag>
-              {list.length > 1 ? <span className="text-caption text-steel">Several copies; the gate compares them with each other.</span> : null}
-            </div>
-            {list.length ? (
-              list.map((s) => <SubmissionCard key={s.id} c={c} s={s} viewerId={viewer.id} issues={issues[s.id] ?? 0} />)
-            ) : (
-              <p className="rounded-lg bg-surface p-6 text-body-sm text-slate">Nobody has added one yet.</p>
-            )}
-          </section>
-        );
-      })}
-
-      {missing.length ? (
-        <p className="text-caption text-steel">
-          Not added yet: {missing.map((t) => `${DOC_TYPES[t].label} (by ${DOC_TYPES[t].issuers.map((r) => ROLE_INFO[r].label).join(" or ")})`).join("; ")}.
-        </p>
+    <div className="space-y-8">
+      {addable.length ? (
+        <details className="group relative inline-block">
+          <summary className={buttonClass("primary", "list-none cursor-pointer")}>
+            <Plus size={16} strokeWidth={2} aria-hidden="true" />
+            Add document
+            <ChevronDown size={16} strokeWidth={2} className="transition-transform group-open:rotate-180" aria-hidden="true" />
+          </summary>
+          <ul className="absolute z-10 mt-2 w-[min(320px,calc(100vw-32px))] overflow-hidden rounded-lg border border-hairline bg-canvas py-1 shadow-lg" aria-label="Add a document">
+            {addable.map((t) => (
+              <li key={t}>
+                <a href={`/cases/${c.caseCode}/documents/new/${docTypeSlug(t)}`} title={DOC_TYPES[t].blurb} className="flex items-center gap-3 px-4 py-2.5 text-[14px] text-charcoal hover:bg-surface">
+                  <span className="w-12 font-mono text-caption text-steel">{DOC_TYPES[t].short}</span>
+                  {DOC_TYPES[t].label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </details>
       ) : null}
+
+      {shown.length ? (
+        shown.map((t) => {
+          const list = byType.get(t)!;
+          return (
+            <section key={t} className="space-y-3">
+              <h2 className="flex items-center gap-2 text-h5">
+                {DOC_TYPES[t].label}
+                {list.length > 1 ? <span className="text-body-sm font-normal text-stone" title="Copies from different people are compared with each other">×{list.length}</span> : null}
+              </h2>
+              {list.map((s) => <SubmissionCard key={s.id} c={c} s={s} viewerId={viewer.id} issues={issues[s.id] ?? 0} />)}
+            </section>
+          );
+        })
+      ) : (
+        <p className="rounded-lg bg-surface p-6 text-body-sm text-slate">No documents yet.</p>
+      )}
     </div>
   );
 }
@@ -104,33 +98,41 @@ function SubmissionCard({ c, s, viewerId, issues }: { c: CaseForUser; s: Submiss
             <Tag tone="purple">{DOC_TYPES[s.type].short}</Tag>
             {s.documentNumber ? <span className="font-mono text-[15px] font-medium text-charcoal">{s.documentNumber}</span> : null}
             {s.documentDate ? <span className="text-body-sm text-slate">{formatDate(s.documentDate)}</span> : null}
-            <Tag tone="orange" title="Entered by a person; not fetched from the government system">Self-declared</Tag>
-            {s.supersedesId ? <Tag tone="gray" title="Replaces an earlier version the same person added">Corrected</Tag> : null}
+            <SourceIcon source={s.source} />
+            {s.supersedesId ? (
+              <span title="Corrected: replaces an earlier version" className="text-steel">
+                <History size={16} strokeWidth={1.8} aria-label="Corrected" role="img" />
+              </span>
+            ) : null}
             {issues ? (
-              <a href={`/cases/${c.caseCode}?tab=checks`}>
-                <Tag tone="red" title="Open mismatches involving this document">{issues} {issues === 1 ? "issue" : "issues"}</Tag>
+              <a href={`/cases/${c.caseCode}?tab=checks`} title="Open issues involving this document" className="rounded-sm px-1 hover:bg-surface">
+                <StatusCount kind="mismatch" n={issues} />
               </a>
             ) : null}
           </div>
-          <p className="text-caption text-steel">
-            Added by {s.adderName} {s.adderUsername ? <span className="font-mono">@{s.adderUsername}</span> : null}
-            {mine ? " (you)" : ""} · {ROLE_INFO[s.addedByRole].label} · {formatDateTime(s.createdAt)}
-            {s.adderOnCase ? null : <span className="ml-2"><Tag tone="gray">No longer on this case</Tag></span>}
+          <p className="flex flex-wrap items-center gap-x-1.5 text-caption text-steel">
+            <span className="text-charcoal">{mine ? "You" : s.adderName}</span>
+            <span>· {ROLE_INFO[s.addedByRole].label}</span>
+            <span>· {formatDateTime(s.createdAt)}</span>
+            {s.adderOnCase ? null : (
+              <span title="No longer on this case">
+                <UserX size={14} strokeWidth={1.8} aria-label="No longer on this case" role="img" />
+              </span>
+            )}
           </p>
         </div>
         {mine ? (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center">
             {correctable ? (
-              <a
-                href={`/cases/${c.caseCode}/documents/new/${docTypeSlug(s.type)}?correct=${s.id}`}
-                className="min-h-10 rounded-sm px-3 py-2 text-[14px] font-medium text-link-blue active:bg-surface"
-              >
-                Correct
+              <a href={`/cases/${c.caseCode}/documents/new/${docTypeSlug(s.type)}?correct=${s.id}`} className={iconButtonClass()} title="Correct" aria-label="Correct">
+                <Pencil size={17} strokeWidth={1.8} aria-hidden="true" />
               </a>
             ) : null}
             <form action={removeSubmission}>
               <input type="hidden" name="submissionId" value={s.id} />
-              <button type="submit" className="min-h-10 rounded-sm px-3 py-2 text-[14px] font-medium text-error active:bg-surface">Remove</button>
+              <button type="submit" className={iconButtonClass("danger")} title="Remove" aria-label="Remove">
+                <Trash size={17} strokeWidth={1.8} aria-hidden="true" />
+              </button>
             </form>
           </div>
         ) : null}
@@ -141,19 +143,24 @@ function SubmissionCard({ c, s, viewerId, issues }: { c: CaseForUser; s: Submiss
       {s.files.length ? (
         <ul className="mt-5 space-y-2 border-t border-hairline-soft pt-4">
           {s.files.map((d) => (
-            <li key={d.id} className="flex flex-wrap items-center gap-3 text-body-sm">
-              <a href={`/cases/${c.caseCode}/documents/${d.id}`} target="_blank" rel="noreferrer" className="font-medium text-link-blue">{d.fileName}</a>
-              <span className="text-steel">{(d.sizeBytes / 1024).toFixed(0)} KB</span>
-              <span className="font-mono text-caption text-stone" title="SHA-256 of the uploaded file">{d.sha256.slice(0, 12)}…</span>
+            <li key={d.id} className="flex flex-wrap items-center gap-2 text-body-sm">
+              <Paperclip size={15} strokeWidth={1.8} className="text-steel" aria-hidden="true" />
+              <a href={`/cases/${c.caseCode}/documents/${d.id}`} target="_blank" rel="noreferrer" className="font-medium text-link-blue" title={`SHA-256 ${d.sha256}`}>
+                {d.fileName}
+              </a>
+              <span className="text-caption text-stone">{(d.sizeBytes / 1024).toFixed(0)} KB</span>
             </li>
           ))}
         </ul>
       ) : null}
 
       {s.provenance && Object.keys(s.provenance).length ? (
-        <details className="mt-4 rounded-lg bg-surface p-4 text-body-sm">
-          <summary className="cursor-pointer font-medium text-charcoal">Where each field came from</summary>
-          <dl className="mt-3 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+        <details className="mt-4 text-body-sm">
+          <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 text-caption text-steel" title="Where each field came from">
+            <Route size={14} strokeWidth={1.8} aria-hidden="true" />
+            Field sources
+          </summary>
+          <dl className="mt-2 grid gap-x-6 gap-y-1 rounded-lg bg-surface p-4 sm:grid-cols-2">
             {Object.entries(s.provenance).map(([k, v]) => (
               <div key={k} className="flex gap-2">
                 <dt className="font-mono text-caption text-slate">{k}</dt>
@@ -164,6 +171,21 @@ function SubmissionCard({ c, s, viewerId, issues }: { c: CaseForUser; s: Submiss
         </details>
       ) : null}
     </Card>
+  );
+}
+
+/** How the fields got here. Everything a person adds is self-declared; the icon says how it was entered. */
+function SourceIcon({ source }: { source: string }) {
+  const [Icon, label] =
+    source === "extracted"
+      ? [ScanText, "Read from the file and confirmed · self-declared"]
+      : source === "upload"
+        ? [FileText, "File only · self-declared"]
+        : [Keyboard, "Typed in · self-declared"];
+  return (
+    <span title={label} className="text-steel">
+      <Icon size={16} strokeWidth={1.8} aria-label={label} role="img" />
+    </span>
   );
 }
 
@@ -196,7 +218,7 @@ function StructuredDetails({ s }: { s: Submission }) {
         <dl className="grid gap-4 sm:grid-cols-3">
           <Detail label="Port"><span className="font-mono">{n.portCode}</span></Detail>
           <Detail label="Exporter IEC · GSTIN"><span className="font-mono">{n.exporter.iec} · {n.exporter.gstin ?? "—"}</span></Detail>
-          <Detail label="Consignee (normalised)">{n.consigneeName}</Detail>
+          <Detail label="Consignee">{n.consigneeName}</Detail>
           <Detail label="Packages">{n.totals.packages}</Detail>
           <Detail label="Gross / net weight">{n.totals.grossWeightT.toFixed(3)} t / {n.totals.netWeightT.toFixed(3)} t</Detail>
           <Detail label="FOB value">{n.totals.value.toFixed(2)} {n.currency}</Detail>
@@ -298,7 +320,7 @@ function StructuredDetails({ s }: { s: Submission }) {
       <>
         <dl className="grid gap-4 sm:grid-cols-3">
           <Detail label="Exporter GSTIN"><span className="font-mono">{n.exporterGstin ?? "Not given"}</span></Detail>
-          <Detail label="Buyer (normalised)">{n.buyerName}{n.destinationCountry ? <span className="text-steel"> · {n.destinationCountry}</span> : null}</Detail>
+          <Detail label="Buyer">{n.buyerName}{n.destinationCountry ? <span className="text-steel"> · {n.destinationCountry}</span> : null}</Detail>
           <Detail label="Total">{n.totals.value.toFixed(2)} {n.currency}</Detail>
           {n.irn ? <Detail label="IRN"><span className="break-all font-mono text-caption">{n.irn}</span></Detail> : null}
         </dl>

@@ -4,7 +4,7 @@ import { startTransition, useActionState, useEffect, useState } from "react";
 import { Field, Input } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { Card, SectionTitle } from "@/components/ui/card";
-import { Tag } from "@/components/ui/badge";
+import { FileUp, Keyboard, QrCode, ScanText, TriangleExclamationPoint } from "lucide-react";
 import type { DocType } from "@/lib/documents";
 import type { OptionSource, StaticOption } from "@/lib/doc-forms";
 import { decodeQrFromFile } from "@/lib/qr/decode-client";
@@ -84,28 +84,40 @@ export function DocEntry({
   if (r) {
     const fromQr = Object.values(r.meta).filter((m) => m.source === "qr").length;
     const toCheck = Object.values(r.meta).filter((m) => m.source === "model" && (m.problem || (m.confidence ?? 0) < 0.8)).length;
+    const readCount = Object.values(r.meta).filter((m) => m.source === "model").length - toCheck;
     return (
       <div className="mt-8 space-y-6">
         <Card>
-          <SectionTitle title="Check what was read" description="Nothing is added to the case until you save. Compare each field with the paper; correct anything that's wrong." />
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-body-sm text-charcoal">{r.fileName}</span>
-            {r.usedQr ? <Tag tone="sky">{fromQr} from the QR code</Tag> : null}
-            {r.usedModel ? <Tag tone="gray">Read by Gemini</Tag> : null}
-            {toCheck ? <Tag tone="orange">{toCheck} to check</Tag> : null}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <h2 className="text-h5">Check what was read</h2>
+            {r.usedQr ? (
+              <span className="inline-flex items-center gap-1 text-[14px] font-semibold text-tag-sky-fg" title={`${fromQr} fields from the QR code (exact; its signature isn't verified)${Object.keys(r.qrExtras).length ? `. Also in it: ${Object.entries(r.qrExtras).map(([k, v]) => `${k} ${v}`).join(", ")}` : ""}`}>
+                <QrCode size={16} strokeWidth={1.8} aria-label="From the QR code" role="img" />
+                {fromQr}
+              </span>
+            ) : null}
+            {r.usedModel ? (
+              <span className="inline-flex items-center gap-1 text-[14px] font-semibold text-stone" title="Read by Gemini">
+                <ScanText size={16} strokeWidth={1.8} aria-label="Read by Gemini" role="img" />
+                {readCount}
+              </span>
+            ) : null}
+            {toCheck ? (
+              <span className="inline-flex items-center gap-1 text-[14px] font-semibold text-tag-orange-fg" title="Uncertain or failing a check: compare with the paper">
+                <TriangleExclamationPoint size={16} strokeWidth={1.8} aria-label="To check" role="img" />
+                {toCheck}
+              </span>
+            ) : null}
           </div>
+          <p className="mt-1 text-body-sm text-slate">Nothing is saved until you confirm the form below.</p>
           {r.warning ? <p role="alert" className="mt-3 rounded-md bg-tint-peach p-3 text-body-sm text-tag-orange-fg">{r.warning}</p> : null}
-          {r.usedQr ? (
-            <p className="mt-3 text-caption text-steel">
-              QR values are copied exactly from the code. Its digital signature isn&apos;t checked yet.
-              {Object.keys(r.qrExtras).length ? <> Also in the QR code: {Object.entries(r.qrExtras).map(([k, v]) => `${k}: ${v}`).join(" · ")}.</> : null}
-            </p>
-          ) : null}
           {preview ? (
             preview.isPdf ? (
-              <a href={preview.url} target="_blank" rel="noreferrer" className="mt-4 inline-block text-body-sm font-medium text-link-blue">Open the PDF to compare</a>
+              <a href={preview.url} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-1.5 text-body-sm font-medium text-link-blue">
+                <FileUp size={15} strokeWidth={1.8} aria-hidden="true" /> {r.fileName}
+              </a>
             ) : (
-              <a href={preview.url} target="_blank" rel="noreferrer" className="mt-4 block">
+              <a href={preview.url} target="_blank" rel="noreferrer" className="mt-4 block" title="Open full size">
                 {/* eslint-disable-next-line @next/next/no-img-element -- a local blob preview, not a remote image */}
                 <img src={preview.url} alt={`The ${label} you uploaded`} className="max-h-[420px] rounded-md border border-hairline object-contain" />
               </a>
@@ -121,7 +133,7 @@ export function DocEntry({
           meta={r.meta}
           hidden={{ extractionId: r.extractionId }}
           showAttach={false}
-          attachNote={<p className="text-caption text-steel">{r.fileName} is attached to this document when you save.</p>}
+          attachNote={null}
         />
       </div>
     );
@@ -129,13 +141,24 @@ export function DocEntry({
 
   return (
     <div className="mt-8 space-y-6">
-      <div className="flex flex-wrap gap-2" role="group" aria-label="How to add it">
-        <Button type="button" variant={mode === "read" ? "dark" : "secondary"} onClick={() => setMode("read")} aria-pressed={mode === "read"}>
-          Read from a photo or PDF
-        </Button>
-        <Button type="button" variant={mode === "type" ? "dark" : "secondary"} onClick={() => setMode("type")} aria-pressed={mode === "type"}>
-          Type it in
-        </Button>
+      <div className="inline-flex rounded-md border border-hairline-strong p-1" role="group" aria-label="How to add it">
+        {(
+          [
+            ["read", ScanText, "From a file"],
+            ["type", Keyboard, "Type it"],
+          ] as const
+        ).map(([m, Icon, text]) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setMode(m)}
+            aria-pressed={mode === m}
+            className={`inline-flex min-h-9 items-center gap-2 rounded-sm px-3 text-[14px] font-medium ${mode === m ? "bg-ink-deep text-canvas" : "text-slate"}`}
+          >
+            <Icon size={16} strokeWidth={1.8} aria-hidden="true" />
+            {text}
+          </button>
+        ))}
       </div>
 
       {mode === "read" ? (
@@ -144,12 +167,12 @@ export function DocEntry({
             title={`Read the ${label}`}
             description={
               canRead
-                ? `Upload a photo or PDF. ${hasQr ? "A QR code on it is read first, exactly; the rest" : "It"} is read by Gemini, and you check every field before saving.`
-                : "Upload a PDF or photo with its QR code visible. Only the QR code can be read here; type the rest in."
+                ? `${hasQr ? "QR code first, then Gemini. " : ""}You confirm every field before it's saved.`
+                : "Only the QR code can be read here; type the rest."
             }
           />
           <form onSubmit={read} className="space-y-4" noValidate>
-            <Field label="Photo or PDF" htmlFor="read-file" hint="PDF, PNG or JPEG. Large photos are shrunk before upload.">
+            <Field label="Photo or PDF" htmlFor="read-file" hint="PDF, PNG or JPEG">
               <Input id="read-file" name="file" type="file" accept="application/pdf,image/png,image/jpeg" className="py-2.5" />
             </Field>
             {localError || state.error ? <p role="alert" className="text-body-sm text-error">{localError ?? state.error}</p> : null}

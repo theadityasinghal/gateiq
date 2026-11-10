@@ -54,9 +54,9 @@ export function isValidContainerNo(input: string): boolean {
 export function suggestContainerNo(input: string, limit = 3): string[] {
   const s = normalizeContainerNo(input);
   if (!FORMAT_RE.test(s) || isValidContainerNo(s)) return [];
+  // Most likely first: two neighbouring digits swapped, then a wrong check digit, then one wrong digit.
   const out = new Set<string>();
   const prefix = s.slice(0, 10);
-  out.add(prefix + containerCheckDigit(prefix));
   const digits = s.slice(4).split("");
   // Adjacent swaps among the 7 digits.
   for (let i = 0; i < 6; i++) {
@@ -66,6 +66,7 @@ export function suggestContainerNo(input: string, limit = 3): string[] {
     const cand = s.slice(0, 4) + d.join("");
     if (isValidContainerNo(cand)) out.add(cand);
   }
+  out.add(prefix + containerCheckDigit(prefix));
   // One wrong serial digit (positions 4..9), keeping the written check digit.
   for (let i = 4; i < 10; i++) {
     for (let d = 0; d <= 9; d++) {

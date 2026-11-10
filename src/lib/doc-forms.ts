@@ -241,7 +241,6 @@ export const DOC_FORMS: Partial<Record<DocType, FormSpec>> = {
       {
         kind: "group",
         title: "Container",
-        description: "One Form-13 per container, as issued by the shipping line.",
         cols: 3,
         fields: [
           { key: "containerNo", label: "Container number", kind: "container" },
@@ -321,7 +320,6 @@ export const DOC_FORMS: Partial<Record<DocType, FormSpec>> = {
       {
         kind: "group",
         title: "Seal",
-        description: "Exactly as uploaded through the e-seal vendor's app.",
         cols: 3,
         fields: [
           { key: "eSealNo", label: "E-seal number", kind: "code", maxLength: 24 },
