@@ -52,15 +52,21 @@ export async function extractDocument(caseCode: string, type: DocType, _prev: Ex
     return { error: "Reading from photos isn't switched on here (no Gemini API key), and no usable QR code was found. Type the details in instead." };
   }
 
-  let upload;
-  try {
-    upload = await uploadCaseDocument(c.id, file);
-  } catch (e) {
-    console.error("Upload for reading failed", e);
+  // The upload and the reading don't depend on each other, so they run together.
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const [uploaded, reading] = await Promise.all([
+    uploadCaseDocument(c.id, file).then(
+      (u) => ({ ok: true as const, u }),
+      (e: unknown) => ({ ok: false as const, e }),
+    ),
+    geminiConfigured() ? readWithGemini({ type, mimeType: file.type, bytes }) : Promise.resolve(null),
+  ]);
+  if (!uploaded.ok) {
+    console.error("Upload for reading failed", uploaded.e);
     return { error: "The file couldn't be uploaded. Please try again." };
   }
+  const upload = uploaded.u;
 
-  const reading = geminiConfigured() ? await readWithGemini({ type, mimeType: file.type, bytes: Buffer.from(await file.arrayBuffer()) }) : null;
   if (reading && !reading.ok && !qrUseful) {
     await removeObjects([upload.path]).catch(() => {});
     return { error: reading.error };

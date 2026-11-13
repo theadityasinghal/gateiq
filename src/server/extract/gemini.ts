@@ -3,8 +3,11 @@ import { ApiError, GoogleGenAI, ThinkingLevel } from "@google/genai";
 import type { DocType } from "@/lib/documents";
 import { extractionPrompt, extractionSchema } from "@/lib/extract/schema";
 
-/** Default model for reading documents; override with GEMINI_MODEL. */
-const DEFAULT_MODEL = "gemini-3.8-flash";
+/**
+ * Default model for reading documents; override with GEMINI_MODEL. Measured on a real shipping bill:
+ * 3.5-flash answers in about 4 s, while the 3.8 and 3.7 flash models mostly came back 503 "high demand".
+ */
+const DEFAULT_MODEL = "gemini-3.5-flash";
 
 export function geminiConfigured(): boolean {
   return !!process.env.GEMINI_API_KEY;
@@ -14,40 +17,83 @@ export function geminiModel(): string {
   return process.env.GEMINI_MODEL?.trim() || DEFAULT_MODEL;
 }
 
-/** Used when the main model is overloaded; override with GEMINI_FALLBACK_MODEL (empty to disable). */
-const DEFAULT_FALLBACK = "gemini-3.6-flash";
+/** Raced against the main model when it is slow or busy; override with GEMINI_FALLBACK_MODEL (empty to disable). */
+const DEFAULT_FALLBACK = "gemini-3.5-flash-lite";
 
 function fallbackModel(): string | null {
   const v = process.env.GEMINI_FALLBACK_MODEL;
   return v === undefined ? DEFAULT_FALLBACK : v.trim() || null;
 }
 
-/** Overloaded, rate limited, or no answer in time: worth one try on the fallback model. */
-const busy = (e: unknown) =>
-  (e instanceof ApiError && (e.status === 503 || e.status === 429)) || (e instanceof Error && (e.name === "AbortError" || e.name === "TimeoutError"));
+/** A typical reading takes 4 to 6 s. If the main model hasn't answered by then, start the fallback beside it. */
+const HEDGE_AFTER_MS = 8_000;
+/** The page allows 60 s per action; the upload and saving also need time, so the model gets 40 s in all. */
+const TOTAL_MS = 40_000;
 
-/**
- * The page allows 60 s per action. Give the main model up to 30 s; if it is busy or slow, give the
- * fallback model up to 25 s. Returns the result and which model produced it.
- */
+/** Overloaded, rate limited, or a server-side failure: worth a try on the fallback model. */
+const busy = (e: unknown) =>
+  (e instanceof ApiError && (e.status === 503 || e.status === 429 || e.status === 500 || e.status === 504)) ||
+  (e instanceof Error && (e.name === "AbortError" || e.name === "TimeoutError"));
+
 class ModelError extends Error {
   constructor(readonly model: string, readonly cause: unknown) {
     super(`Gemini call failed on ${model}`);
   }
 }
 
-async function withRetry<T>(model: string, call: (model: string, timeoutMs: number) => Promise<T>): Promise<{ value: T; model: string }> {
+/**
+ * Asks the main model; if it fails as busy, or hasn't answered after HEDGE_AFTER_MS, also asks the fallback
+ * and takes whichever answers first (the other request is dropped). Nothing waits for a slow model
+ * to time out before the next one is tried. Gives up after TOTAL_MS.
+ */
+async function hedged<T>(model: string, call: (model: string, signal: AbortSignal) => Promise<T>): Promise<{ value: T; model: string }> {
+  const fb = fallbackModel();
+  const all = new AbortController();
+  const deadline = setTimeout(() => all.abort(new DOMException("Gemini took too long", "TimeoutError")), TOTAL_MS);
+  const hedgeTimer: { id?: ReturnType<typeof setTimeout> } = {};
+
   try {
-    return { value: await call(model, 30_000), model };
-  } catch (e) {
-    const fb = fallbackModel();
-    if (!busy(e) || !fb || fb === model) throw new ModelError(model, e);
-    console.warn("Gemini model busy or slow, using fallback", { model, fallback: fb });
-    try {
-      return { value: await call(fb, 25_000), model: fb };
-    } catch (e2) {
-      throw new ModelError(fb, e2);
-    }
+    return await new Promise<{ value: T; model: string }>((resolve, reject) => {
+      const failures: ModelError[] = [];
+      let running = 0;
+      let fallbackStarted = false;
+
+      const start = (m: string) => {
+        running++;
+        call(m, all.signal).then(
+          (value) => resolve({ value, model: m }),
+          (e) => {
+            running--;
+            failures.push(new ModelError(m, e));
+            // A failure that isn't about load (bad request, bad key) won't be fixed by another model.
+            if (!busy(e) && m === model) return reject(failures[failures.length - 1]);
+            if (m === model && !fallbackStarted && fb && fb !== model && !all.signal.aborted) {
+              console.warn("Gemini model busy, using fallback", { model: m, fallback: fb });
+              startFallback();
+            }
+            if (running === 0) reject(failures[failures.length - 1]);
+          },
+        );
+      };
+      const startFallback = () => {
+        if (fallbackStarted || !fb || fb === model) return;
+        fallbackStarted = true;
+        clearTimeout(hedgeTimer.id);
+        start(fb);
+      };
+
+      if (fb && fb !== model) {
+        hedgeTimer.id = setTimeout(() => {
+          console.warn("Gemini model slow, racing the fallback", { model, fallback: fb });
+          startFallback();
+        }, HEDGE_AFTER_MS);
+      }
+      start(model);
+    });
+  } finally {
+    clearTimeout(deadline);
+    clearTimeout(hedgeTimer.id);
+    all.abort(); // drops whichever request is still waiting
   }
 }
 
@@ -64,7 +110,7 @@ function ai(): GoogleGenAI {
 export async function readWithGemini(args: { type: DocType; mimeType: string; bytes: Buffer }): Promise<{ ok: true; output: unknown; model: string } | { ok: false; error: string }> {
   let model = geminiModel();
   try {
-    const { value: res, model: used } = await withRetry(model, (m, timeout) => ai().models.generateContent({
+    const { value: res, model: used } = await hedged(model, (m, signal) => ai().models.generateContent({
       model: m,
       contents: [
         {
@@ -76,7 +122,7 @@ export async function readWithGemini(args: { type: DocType; mimeType: string; by
         responseMimeType: "application/json",
         responseJsonSchema: extractionSchema(args.type),
         thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-        httpOptions: { timeout },
+        abortSignal: signal,
       },
     }));
     model = used;
