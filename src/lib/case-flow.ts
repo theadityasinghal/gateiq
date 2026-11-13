@@ -3,7 +3,7 @@
  * feed it what they have already loaded. The gate stage has no screens yet, so it is always "later".
  */
 import { canAddDocument, missingDocuments, type DocNeed, type DocType } from "@/lib/documents";
-import type { Role } from "@/lib/roles";
+import { isReadOnly, type Role } from "@/lib/roles";
 
 export type StepState = "done" | "current" | "todo" | "later";
 export type FlowStepKey = "created" | "people" | "documents" | "checks" | "gate";
@@ -60,7 +60,8 @@ export function caseFlow(i: CaseFlowInput): CaseFlow {
   const mine = missing.filter((n) => n.anyOf.some((t) => canAddDocument(i.role, t)));
   const others = missing.filter((n) => !mine.includes(n));
   let next: string;
-  if (i.role === "consignor" && !i.consigneeLinked) next = "Invite your consignee to this case.";
+  if (isReadOnly(i.role)) next = open > 0 ? `Nothing to add. ${plural(open, "open flag", "open flags")} to review.` : "Nothing to add. No open flags.";
+  else if (i.role === "consignor" && !i.consigneeLinked) next = "Invite your consignee to this case.";
   else if (mine.length) next = `Add ${list(mine.map((n) => n.label.toLowerCase()))}.`;
   else if (i.issues && i.issues.forYou > 0) next = `Fix or explain ${plural(i.issues.forYou, "check", "checks")} on your documents.`;
   else if (open > 0) next = `${plural(open, "open check", "open checks")}: the people who added those documents can fix them.`;

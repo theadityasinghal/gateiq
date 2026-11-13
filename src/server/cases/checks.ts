@@ -5,6 +5,7 @@ import { caseSubmission, checkAck, user } from "@/db/schema";
 import { runChecks } from "@/lib/checks/engine";
 import type { CheckAck, CheckReport } from "@/lib/checks/types";
 import type { DocType } from "@/lib/documents";
+import type { FactView } from "@/lib/facts/ladder";
 import type { Role } from "@/lib/roles";
 
 export async function listCheckAcks(caseId: string): Promise<CheckAck[]> {
@@ -30,6 +31,8 @@ export type CheckInput = {
   ownerName: string;
   submissions: Array<{ id: string; type: DocType; addedByRole: Role; adderName: string; documentNumber: string | null; normalized: unknown }>;
   acks: CheckAck[];
+  /** Verified values on the case; documents are compared with these first. */
+  facts?: FactView[];
 };
 
 /** The cross-document checks for one case. Pure: the page and the dashboard both feed it what they have loaded. */
@@ -50,6 +53,7 @@ export function computeCheckReport(i: CheckInput): CheckReport {
       normalized: s.normalized,
     })),
     acks: i.acks,
+    facts: i.facts,
   });
 }
 

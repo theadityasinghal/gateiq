@@ -4,7 +4,8 @@ import { caseFlow } from "@/lib/case-flow";
 import { expectedDocuments } from "@/lib/documents";
 import type { Role } from "@/lib/roles";
 import { computeCheckReport, listCheckAcks, summarizeReport } from "./checks";
-import { getCaseConsignee, getCaseForUser, getUserHandle, listCaseMembers, listSubmissions } from "./service";
+import { loadFacts } from "./facts-data";
+import { consigneeOf, getCaseForUser, listCaseActivity, listCaseMembers, listSubmissions, withAdderOnCase } from "./service";
 
 /**
  * Everything the pages of one case show: its documents, people, owner, consignee, the cross-document checks
@@ -14,14 +15,13 @@ import { getCaseConsignee, getCaseForUser, getUserHandle, listCaseMembers, listS
 export const loadCasePage = cache(async (code: string, userId: string, role: Role) => {
   const c = await getCaseForUser(code, userId);
   if (!c) return null;
-  const [submissions, members, owner, consignee, acks] = await Promise.all([
-    listSubmissions(c),
-    listCaseMembers(c.id),
-    getUserHandle(c.ownerId),
-    getCaseConsignee(c.id),
-    listCheckAcks(c.id),
-  ]);
-  const report = computeCheckReport({ case: c, consigneeParty: consignee?.partyName ?? null, ownerName: owner?.name ?? "Consignor", submissions, acks });
+  // The case query already brought the owner; everything else is independent, so it all loads at once.
+  const [members, rows, acks, factMap, activity] = await Promise.all([listCaseMembers(c.id), listSubmissions(c), listCheckAcks(c.id), loadFacts([c.id]), listCaseActivity(c.id)]);
+  const submissions = withAdderOnCase(rows, c, members);
+  const consignee = consigneeOf(members);
+  const owner = c.owner;
+  const facts = factMap.get(c.id) ?? [];
+  const report = computeCheckReport({ case: c, consigneeParty: consignee?.partyName ?? null, ownerName: owner.name, submissions, acks, facts });
   const flow = caseFlow({
     role,
     members: members.length,
@@ -30,7 +30,7 @@ export const loadCasePage = cache(async (code: string, userId: string, role: Rol
     needs: expectedDocuments(c),
     issues: summarizeReport(report, submissions.length, role),
   });
-  return { c, submissions, members, owner, consignee, report, flow };
+  return { c, submissions, members, owner, consignee, report, flow, facts, activity };
 });
 
 export type CasePage = NonNullable<Awaited<ReturnType<typeof loadCasePage>>>;

@@ -1,6 +1,5 @@
 import type { CaseForUser, Submission } from "@/server/cases/service";
-import { removeSubmission } from "@/server/cases/submissions";
-import { DOC_TYPES, DOC_TYPE_KEYS, addableTypes, docTypeSlug, type DocType } from "@/lib/documents";
+import { DOC_TYPES, addableTypes, docTypeSlug } from "@/lib/documents";
 import { ROLE_INFO, type Role } from "@/lib/roles";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { NormalizedShippingBill } from "@/lib/normalize/shipping-bill";
@@ -9,12 +8,13 @@ import type { NormalizedLorryReceipt } from "@/lib/normalize/lorry-receipt";
 import type { NormalizedESeal, NormalizedForm13, NormalizedVgm } from "@/lib/normalize/port-docs";
 import type { NormalizedInvoice, NormalizedPackingList } from "@/lib/normalize/commercial-docs";
 import { formatContainerNo, isValidContainerNo } from "@/lib/iso6346";
-import { ChevronDown, FileText, History, Keyboard, Paperclip, Pencil, Plus, Route, ScanText, Trash, UserX } from "lucide-react";
+import { ChevronDown, FileText, History, Keyboard, Paperclip, Pencil, Plus, Route, ScanText, UserX } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { StatusCount, iconButtonClass } from "@/components/ui/status";
 import { Tag } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { DocIcon } from "@/components/doc-icon";
+import { RemoveSubmissionButton, SubmissionList } from "./submission-list";
 
 /**
  * Everything everyone has added to the case, grouped by document type. Several of one type can sit side
@@ -33,12 +33,10 @@ export function DocumentsTab({
   issues: Record<string, number>;
 }) {
   const addable = addableTypes(viewer.role);
-  const byType = new Map<DocType, Submission[]>();
-  for (const s of submissions) byType.set(s.type, [...(byType.get(s.type) ?? []), s]);
-  const shown = DOC_TYPE_KEYS.filter((t) => byType.has(t));
+  const items = submissions.map((s) => ({ id: s.id, type: s.type, node: <SubmissionCard c={c} s={s} viewerId={viewer.id} issues={issues[s.id] ?? 0} /> }));
 
   return (
-    <div className="animate-rise space-y-8">
+    <div className="space-y-8">
       {addable.length ? (
         <details className="group relative inline-block">
           <summary className={buttonClass("primary", "list-none cursor-pointer")}>
@@ -59,23 +57,7 @@ export function DocumentsTab({
         </details>
       ) : null}
 
-      {shown.length ? (
-        shown.map((t) => {
-          const list = byType.get(t)!;
-          return (
-            <section key={t} className="space-y-3">
-              <h2 className="flex items-center gap-2 text-h5">
-                <DocIcon type={t} size={20} className="text-steel" />
-                {DOC_TYPES[t].label}
-                {list.length > 1 ? <span className="text-body-sm font-normal text-stone" title="Copies from different people are compared with each other">×{list.length}</span> : null}
-              </h2>
-              {list.map((s) => <SubmissionCard key={s.id} c={c} s={s} viewerId={viewer.id} issues={issues[s.id] ?? 0} />)}
-            </section>
-          );
-        })
-      ) : (
-        <p className="rounded-lg bg-surface p-6 text-body-sm text-slate">No documents yet.</p>
-      )}
+      <SubmissionList items={items} />
     </div>
   );
 }
@@ -130,12 +112,7 @@ function SubmissionCard({ c, s, viewerId, issues }: { c: CaseForUser; s: Submiss
                 <Pencil size={17} strokeWidth={1.8} aria-hidden="true" />
               </a>
             ) : null}
-            <form action={removeSubmission}>
-              <input type="hidden" name="submissionId" value={s.id} />
-              <button type="submit" className={iconButtonClass("danger")} title="Remove" aria-label="Remove">
-                <Trash size={17} strokeWidth={1.8} aria-hidden="true" />
-              </button>
-            </form>
+            <RemoveSubmissionButton id={s.id} />
           </div>
         ) : null}
       </div>

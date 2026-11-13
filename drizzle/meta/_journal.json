@@ -57,6 +57,13 @@
       "when": 1794330198500,
       "tag": "0007_document_extraction",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794562079852,
+      "tag": "0008_case_facts",
+      "breakpoints": true
     }
   ]
 }

@@ -4,12 +4,16 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { caseGoodsLine, shipmentCase } from "@/db/schema";
-import { generateCaseCode } from "@/lib/case-id";
+import { generateCaseCode, normalizeCaseCode } from "@/lib/case-id";
 import { caseSchema, issuesToFieldErrors } from "@/lib/case-schema";
-import { getCurrentUser } from "@/server/session";
+import { getCurrentUser, requireOnboardedUser } from "@/server/session";
+import { fail, ok, type ActionResult } from "@/lib/action-result";
+import { deleteCasesCascade } from "./delete";
+import { getOwnedCase } from "./service";
 import { audit } from "@/server/audit";
-import { ALLOWED_DOCUMENT_TYPES, MAX_TOTAL_UPLOAD_BYTES } from "@/server/storage";
+import { ALLOWED_DOCUMENT_TYPES, MAX_TOTAL_UPLOAD_BYTES, removeObjects } from "@/server/storage";
 import { checkAgainstMasters, fileOrNull, parsePayload } from "./form-helpers";
+import { declareCaseRecordFacts } from "./facts-data";
 import { storeSubmission } from "./submission-store";
 
 export type CaseFormState = {
@@ -102,6 +106,17 @@ export async function createCase(_prev: CaseFormState, formData: FormData): Prom
           { actorId: me.id, action: "case.created", entityType: "case", entityId: row.id, details: { caseCode, lines: data.lines.length } },
           tx,
         );
+        // What the consignor declared becomes their declared facts; others can confirm them.
+        await declareCaseRecordFacts(tx, {
+          caseId: row.id,
+          caseCode,
+          owner: { id: me.id, role: "consignor" },
+          record: {
+            exportPortCode: data.exportPortCode,
+            consigneeName: null,
+            lines: data.lines.map((l) => ({ hsCode: l.hsCode, packages: l.packages, grossWeight: Number(l.grossWeight), weightUnit: l.weightUnit.toUpperCase() })),
+          },
+        });
         return row;
       });
     } catch (e) {
@@ -133,4 +148,27 @@ export async function createCase(_prev: CaseFormState, formData: FormData): Prom
 
   revalidatePath("/", "layout");
   redirect(`/cases/${created.caseCode}`);
+}
+
+/**
+ * Deletes a case and everything on it. Only the consignor who owns it, and only after typing its Case ID.
+ * The audit rows stay. The stored files are removed after the database commit.
+ */
+export async function deleteCase(caseCode: string, typedCode: string): Promise<ActionResult> {
+  const me = await requireOnboardedUser();
+  const c = await getOwnedCase(caseCode, me.id);
+  if (!c) return fail("Only the consignor who owns this case can delete it.");
+  if (normalizeCaseCode(typedCode) !== c.caseCode) return fail("Type the Case ID exactly to confirm.");
+  let paths: string[] = [];
+  await db.transaction(async (tx) => {
+    paths = await deleteCasesCascade(tx, [c.id]);
+    await audit({ actorId: me.id, action: "case.deleted", entityType: "case", entityId: c.id, details: { caseCode: c.caseCode, documents: paths.length } }, tx);
+  });
+  try {
+    await removeObjects(paths);
+  } catch (e) {
+    console.error("deleteCase: could not remove stored documents", e);
+  }
+  revalidatePath("/", "layout");
+  return ok;
 }

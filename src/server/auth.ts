@@ -3,11 +3,12 @@ import { betterAuth } from "better-auth";
 import { APIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { username as usernamePlugin } from "better-auth/plugins";
 import { db } from "@/db";
 import { user, session, account, verification, rateLimit } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { parsePhone } from "@/lib/phone";
-import { validateUsername } from "@/lib/username";
+import { normalizeUsername, validateUsername } from "@/lib/username";
 
 function required(name: string): string {
   const v = process.env[name];
@@ -29,8 +30,8 @@ const vercelOrigins = [
   .map((h) => `https://${h}`);
 
 /**
- * Email + password sign-in. Users, sessions and password hashes (scrypt) live in our own
- * Postgres tables (no Supabase Auth).
+ * Username + password sign-in (the username is the permanent identity; the email can change and is not a
+ * sign-in name). Users, sessions and password hashes (scrypt) live in our own Postgres tables (no Supabase Auth).
  *
  * Prototype decision: the email address is trusted as typed. There is no verification link
  * or OTP, so the email shows as "self-declared" on the profile. Turning on
@@ -50,10 +51,10 @@ export const auth = betterAuth({
   },
   user: {
     // Sent by the sign-up form. Validated and normalised in databaseHooks below, never trusted as sent.
+    // (`username` comes from the username plugin.)
     additionalFields: {
       phone: { type: "string", required: true, input: true },
       phoneCountry: { type: "string", required: true, input: true },
-      username: { type: "string", required: true, input: true },
     },
   },
   databaseHooks: {
@@ -77,9 +78,10 @@ export const auth = betterAuth({
       },
     },
   },
-  // Profile changes (name, phone, role) go through our own validated Server Actions.
-  // These endpoints would let a signed-in user write user columns directly, so they are off.
-  disabledPaths: ["/update-user", "/change-email", "/delete-user"],
+  // Profile changes (name, phone, email, password, account deletion) go through our own validated Server Actions.
+  // These endpoints would let a signed-in user write user columns directly, so they are off. Sign-in by
+  // email is off too: people sign in with their username.
+  disabledPaths: ["/update-user", "/change-email", "/delete-user", "/sign-in/email"],
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // refresh daily
@@ -95,7 +97,7 @@ export const auth = betterAuth({
     window: 60,
     max: 100,
     customRules: {
-      "/sign-in/email": { window: 60, max: 5 },
+      "/sign-in/username": { window: 60, max: 5 },
       "/sign-up/email": { window: 60 * 10, max: 5 },
     },
   },
@@ -103,5 +105,13 @@ export const auth = betterAuth({
     // Vercel overwrites these with the real client address; a client-sent value is not trusted.
     ipAddress: { ipAddressHeaders: ["x-real-ip", "x-forwarded-for"] },
   },
-  plugins: [nextCookies()],
+  plugins: [
+    // No separate display name: the lowercase username is what everyone sees.
+    usernamePlugin({
+      displayUsername: false,
+      usernameValidator: (u) => validateUsername(u).ok,
+      usernameNormalization: normalizeUsername,
+    }),
+    nextCookies(),
+  ],
 });

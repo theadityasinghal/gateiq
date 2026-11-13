@@ -7,7 +7,8 @@ import { db } from "@/db";
 import { caseSubmission, checkAck, documentExtraction, shipmentCase } from "@/db/schema";
 import { changedFields } from "@/lib/extract/postprocess";
 import { DOC_TYPES, canAddDocument, docLabelInline, isDocType, type DocType } from "@/lib/documents";
-import { ROLE_INFO } from "@/lib/roles";
+import { ROLE_INFO, isReadOnly } from "@/lib/roles";
+import { fail, ok, type ActionResult } from "@/lib/action-result";
 import { requireOnboardedUser } from "@/server/session";
 import { audit } from "@/server/audit";
 import { fileOrNull, parsePayload } from "./form-helpers";
@@ -157,17 +158,18 @@ export async function addFileDocument(
  * Takes back something you added. Only your own, and only while you are still on the case.
  * The row stays (marked removed) so the record trail is complete; it just stops showing.
  */
-export async function removeSubmission(formData: FormData): Promise<void> {
+export async function removeSubmission(submissionId: string): Promise<ActionResult> {
   const me = await requireOnboardedUser();
-  const id = String(formData.get("submissionId") ?? "");
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return;
+  const id = String(submissionId ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return fail("Not found.");
   const [row] = await db
     .select({ id: caseSubmission.id, caseId: caseSubmission.caseId, type: caseSubmission.type, addedBy: caseSubmission.addedBy, caseCode: shipmentCase.caseCode })
     .from(caseSubmission)
     .innerJoin(shipmentCase, eq(shipmentCase.id, caseSubmission.caseId))
     .where(and(eq(caseSubmission.id, id), isNull(caseSubmission.removedAt)));
-  if (!row || row.addedBy !== me.id) return;
-  if (!(await getCaseForUser(row.caseCode, me.id))) return;
+  if (!row) return ok; // already gone
+  if (row.addedBy !== me.id) return fail("You can only remove documents you added.");
+  if (!(await getCaseForUser(row.caseCode, me.id))) return fail("You don't have access to this case.");
 
   await db.transaction(async (tx) => {
     await tx
@@ -182,6 +184,7 @@ export async function removeSubmission(formData: FormData): Promise<void> {
   });
   revalidatePath(`/cases/${row.caseCode}`, "layout");
   revalidatePath("/dashboard");
+  return ok;
 }
 
 /**
@@ -189,20 +192,22 @@ export async function removeSubmission(formData: FormData): Promise<void> {
  * Anyone on the case may do it; the note and who wrote it show on the check. It lapses by itself as soon
  * as the values involved change.
  */
-export async function acknowledgeCheck(caseCode: string, _prev: { error?: string; ok?: boolean }, formData: FormData): Promise<{ error?: string; ok?: boolean }> {
+export async function acknowledgeCheck(caseCode: string, checkKey: string, valuesKey: string, rawNote: string): Promise<ActionResult> {
   const me = await requireOnboardedUser();
   const c = await getCaseForUser(caseCode, me.id);
-  if (!c) return { error: "You don't have access to this case." };
-  const checkKey = String(formData.get("checkKey") ?? "").slice(0, 300);
-  const valuesKey = String(formData.get("valuesKey") ?? "").slice(0, 4000);
-  const note = String(formData.get("note") ?? "").trim();
-  if (!checkKey || !valuesKey) return { error: "Missing check." };
-  if (note.length < 5) return { error: "Say briefly why this is fine (at least a few words)." };
-  if (note.length > 500) return { error: "Keep the note under 500 characters." };
+  if (!c) return fail("You don't have access to this case.");
+  if (isReadOnly(me.role)) return fail("Your account type can only view this case.");
+  checkKey = String(checkKey ?? "").slice(0, 300);
+  valuesKey = String(valuesKey ?? "").slice(0, 4000);
+  const note = String(rawNote ?? "").trim();
+  if (!checkKey || !valuesKey) return fail("Missing check.");
+  if (note.length < 5) return fail("Say briefly why this is fine (at least a few words).");
+  if (note.length > 500) return fail("Keep the note under 500 characters.");
   await db.transaction(async (tx) => {
     await tx.insert(checkAck).values({ caseId: c.id, checkKey, valuesKey, note, userId: me.id });
     await audit({ actorId: me.id, action: "case.check_acknowledged", entityType: "case", entityId: c.id, details: { caseCode: c.caseCode, checkKey, note } }, tx);
   });
   revalidatePath(`/cases/${c.caseCode}`, "layout");
-  return { ok: true };
+  revalidatePath("/dashboard");
+  return ok;
 }

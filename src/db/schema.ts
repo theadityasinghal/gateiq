@@ -14,7 +14,9 @@ import {
   doublePrecision,
   bigint,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { ROLES } from "@/lib/roles";
+import type { ClaimValue } from "@/lib/checks/types";
 
 /* ───────────── Better Auth tables (names/columns match Better Auth's core schema) ───────────── */
 
@@ -360,6 +362,63 @@ export const checkAck = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("check_ack_case_idx").on(t.caseId)],
+);
+
+/* ───────────── Verified info (ground truth) ───────────── */
+
+/** What is stored for a fact. "Confirmed" is derived from the confirmations (lib/facts/ladder). */
+export const factLevelEnum = pgEnum("fact_level", ["declared", "source_verified", "observed"]);
+
+/**
+ * One verified value for one thing on a case (the shipping bill number, or one container's e-seal). Documents
+ * are compared with it first. Rows are never edited: replacing a value marks the old row superseded and adds a new one.
+ */
+export const caseFact = pgTable(
+  "case_fact",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    caseId: uuid("case_id")
+      .notNull()
+      .references(() => shipmentCase.id, { onDelete: "cascade" }),
+    /** A key of FACT_KEYS. */
+    factKey: text("fact_key").notNull(),
+    /** "case", or the container number a container fact belongs to. */
+    scope: text("scope").notNull().default("case"),
+    value: jsonb("value").$type<ClaimValue>().notNull(),
+    display: text("display").notNull(),
+    level: factLevelEnum("level").notNull().default("declared"),
+    setBy: text("set_by")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    setByRole: roleEnum("set_by_role").notNull(),
+    /** Submission ids that said this value when it was put forward. */
+    evidence: jsonb("evidence").$type<string[]>().notNull().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    supersededAt: timestamp("superseded_at", { withTimezone: true }),
+    supersededBy: uuid("superseded_by"),
+  },
+  (t) => [
+    index("case_fact_case_idx").on(t.caseId),
+    // One current value per fact per scope.
+    uniqueIndex("case_fact_current_uq").on(t.caseId, t.factKey, t.scope).where(sql`${t.supersededAt} is null`),
+  ],
+);
+
+/** Someone agreeing with the current value of a fact. */
+export const caseFactConfirmation = pgTable(
+  "case_fact_confirmation",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    factId: uuid("fact_id")
+      .notNull()
+      .references(() => caseFact.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    role: roleEnum("role").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("case_fact_confirmation_uq").on(t.factId, t.userId)],
 );
 
 /* ───────────── Audit ───────────── */

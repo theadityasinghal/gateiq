@@ -1,31 +1,16 @@
-import { notFound, redirect } from "next/navigation";
-import { requireOnboardedUser } from "@/server/session";
-import { loadCasePage } from "@/server/cases/page-data";
 import type { CaseConsignee, CaseForUser } from "@/server/cases/service";
+import type { CaseFlow } from "@/lib/case-flow";
 import { countryName } from "@/lib/format";
 import { Card } from "@/components/ui/card";
 import { Tag } from "@/components/ui/badge";
 import { FlowStrip } from "@/components/flow-strip";
 import { ArrowRight, Package, Route, TriangleExclamationPoint } from "lucide-react";
 
-type Props = { params: Promise<{ code: string }>; searchParams: Promise<{ tab?: string; upload?: string }> };
-
-/** Where the old `?tab=` links of the one-page case now live. */
-const LEGACY_TAB: Record<string, string> = { documents: "documents", filing: "documents", checks: "checks" };
-
 /** The case's home: where it is in its flow, then the product it carries. */
-export default async function CaseOverviewPage({ params, searchParams }: Props) {
-  const [{ code }, { tab, upload }] = await Promise.all([params, searchParams]);
-  const user = await requireOnboardedUser();
-  const data = await loadCasePage(code, user.id, user.role);
-  if (!data) notFound();
-  const { c, consignee, flow } = data;
-  if (tab && LEGACY_TAB[tab]) redirect(`/cases/${c.caseCode}/${LEGACY_TAB[tab]}`);
-  if (c.caseCode !== code) redirect(`/cases/${c.caseCode}`);
-
+export function OverviewPanel({ c, consignee, flow, uploadFailed, footer }: { c: CaseForUser; consignee: CaseConsignee | null; flow: CaseFlow; uploadFailed: boolean; footer?: React.ReactNode }) {
   return (
-    <div className="animate-rise space-y-6">
-      {upload === "failed" ? (
+    <div className="space-y-6">
+      {uploadFailed ? (
         <p role="alert" className="flex items-start gap-2 rounded-lg bg-tag-red-bg p-4 text-body-sm text-tag-red-fg">
           <TriangleExclamationPoint size={18} strokeWidth={1.8} className="mt-0.5 shrink-0" aria-hidden="true" />
           <span>The case was created, but a document failed to upload. Check the storage settings and try again.</span>
@@ -45,6 +30,7 @@ export default async function CaseOverviewPage({ params, searchParams }: Props) 
       </Card>
 
       <ProductInfo c={c} consignee={consignee} />
+      {footer}
     </div>
   );
 }

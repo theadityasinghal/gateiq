@@ -1,15 +1,14 @@
-import Link from "next/link";
+import { PendingLink } from "@/components/pending-link";
 import { requireOnboardedUser } from "@/server/session";
-import { listCasesForOwner, listPendingInvites, listSharedCases, type CaseRow, type PendingInvite } from "@/server/cases/service";
+import { listCasesForOwner, listPendingInvites, listSharedCases, type CaseRow } from "@/server/cases/service";
 import { loadDashboardCases, type DashboardCase } from "@/server/cases/dashboard";
-import { respondToInvite } from "@/server/cases/members";
+import { Invitations } from "./invitations";
 import type { CheckSummary } from "@/server/cases/checks";
-import { ArrowRight, Check, Info, Mail, PackageOpen, Plus, Wrench, X } from "lucide-react";
+import { ArrowRight, Info, PackageOpen, Plus, Wrench } from "lucide-react";
 import { StatusCount, StatusIcon } from "@/components/ui/status";
 import { ROLE_INFO } from "@/lib/roles";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import { tintBg } from "@/components/ui/card";
-import { Tag } from "@/components/ui/badge";
 import { FlowStrip } from "@/components/flow-strip";
 import { countryName, formatDate } from "@/lib/format";
 
@@ -39,37 +38,6 @@ export default async function DashboardPage() {
 
       {isOwner ? <OwnCases cases={cases} progress={progress} /> : <SharedCases cases={cases} progress={progress} tint={tintBg[info.tint]} />}
     </div>
-  );
-}
-
-function Invitations({ invites }: { invites: PendingInvite[] }) {
-  return (
-    <section aria-labelledby="invites-heading" className="rounded-lg border border-hairline bg-canvas p-6">
-      <div className="mb-4 flex items-center gap-2">
-        <Mail size={20} strokeWidth={1.8} className="text-steel" aria-hidden="true" />
-        <h2 id="invites-heading" className="text-h5">Invitations</h2>
-        <Tag tone="orange">{invites.length}</Tag>
-      </div>
-      <ul className="divide-y divide-hairline-soft">
-        {invites.map((i) => (
-          <li key={i.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-            <div className="min-w-0">
-              <p className="font-mono text-[15px] font-medium text-charcoal">{i.caseCode}</p>
-              <p className="text-caption text-steel">
-                {i.inviterName} <span className="font-mono">@{i.inviterUsername}</span>
-                {i.inviterRole ? ` (${ROLE_INFO[i.inviterRole].label})` : ""} invited you · {i.exportPortCode} <ArrowRight size={12} className="inline" aria-label="to" role="img" /> {countryName(i.destinationCountry)} ·{" "}
-                {formatDate(i.createdAt)}
-              </p>
-            </div>
-            <form action={respondToInvite} className="flex gap-2">
-              <input type="hidden" name="memberId" value={i.id} />
-              <Button type="submit" name="decision" value="decline" variant="secondary"><X size={16} strokeWidth={2} aria-hidden="true" />Decline</Button>
-              <Button type="submit" name="decision" value="accept"><Check size={16} strokeWidth={2} aria-hidden="true" />Accept</Button>
-            </form>
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }
 
@@ -113,7 +81,7 @@ function ChecksCell({ s, caseCode }: { s: CheckSummary | null; caseCode: string 
   if (!s || s.documents === 0) return <span className="text-stone" title="No documents yet">–</span>;
   if (!s.toFix && !s.worthALook) return <StatusIcon kind="agree" />;
   return (
-    <Link href={`/cases/${caseCode}/checks`} className="flex flex-wrap items-center gap-3">
+    <PendingLink href={`/cases/${caseCode}/checks`} className="flex flex-wrap items-center gap-3">
       <StatusCount kind="mismatch" n={s.toFix} />
       <StatusCount kind="warning" n={s.worthALook} />
       {s.forYou ? (
@@ -122,7 +90,7 @@ function ChecksCell({ s, caseCode }: { s: CheckSummary | null; caseCode: string 
           {s.forYou}
         </span>
       ) : null}
-    </Link>
+    </PendingLink>
   );
 }
 
@@ -147,7 +115,7 @@ function CaseTable({ cases, progress }: { cases: CaseRow[]; progress: Progress }
               return (
                 <tr key={c.id} className="border-t border-hairline-soft align-top transition-colors duration-150 hover:bg-surface-soft">
                   <td className="px-5 py-4">
-                    <Link href={`/cases/${c.caseCode}`} className="block font-mono font-medium text-link-blue">{c.caseCode}</Link>
+                    <PendingLink href={`/cases/${c.caseCode}`} className="flex items-center gap-2 font-mono font-medium text-link-blue">{c.caseCode}</PendingLink>
                     <p className="mt-1 flex items-center gap-1.5 text-caption text-steel">{c.exportPortCode} <ArrowRight size={12} strokeWidth={1.8} aria-label="to" role="img" /> {countryName(c.destinationCountry)}</p>
                   </td>
                   <td className="px-5 py-4">{p ? <FlowStrip steps={p.flow.steps} compact /> : null}</td>

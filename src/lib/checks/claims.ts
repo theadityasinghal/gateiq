@@ -66,22 +66,27 @@ function caseTonnes(amount: number, unit: string): number | null {
   return u === "KGS" ? amount / 1000 : u === "MTS" ? amount : null;
 }
 
+/** What the case record itself says (the consignor's declaration when creating the case). */
+export function caseRecordClaims(caseRecord: CheckCase, caseSource: SourceRef): Claim[] {
+  const out: Claim[] = [
+    ...claim("port.code", caseRecord.exportPortCode, caseSource),
+    ...claim("consignee.name", caseRecord.consigneeName, caseSource),
+    ...claim("goods.hsCodes", [...new Set(caseRecord.lines.map((l) => l.hsCode))].sort(), caseSource),
+    ...claim("goods.packages", caseRecord.lines.reduce((s, l) => s + l.packages, 0) || null, caseSource),
+  ];
+  const tonnes = caseRecord.lines.map((l) => caseTonnes(l.grossWeight, l.weightUnit));
+  if (tonnes.length && tonnes.every((x) => x != null)) {
+    const total = (tonnes as number[]).reduce((s, x) => s + x, 0);
+    out.push(...claim("goods.grossWeight", total, caseSource, t3(total)));
+  }
+  return out;
+}
+
 export function extractClaims(caseRecord: CheckCase, caseSource: SourceRef, submissions: CheckSubmission[]): Extracted {
   const out: Extracted = { claims: [], mentions: [], vgms: [], sizeTypes: [], ewbs: [], sbGross: [] };
   const push = (...c: Claim[][]) => out.claims.push(...c.flat());
 
-  // The consignor's case record.
-  push(
-    claim("port.code", caseRecord.exportPortCode, caseSource),
-    claim("consignee.name", caseRecord.consigneeName, caseSource),
-    claim("goods.hsCodes", [...new Set(caseRecord.lines.map((l) => l.hsCode))].sort(), caseSource),
-    claim("goods.packages", caseRecord.lines.reduce((s, l) => s + l.packages, 0) || null, caseSource),
-  );
-  const tonnes = caseRecord.lines.map((l) => caseTonnes(l.grossWeight, l.weightUnit));
-  if (tonnes.length && tonnes.every((x) => x != null)) {
-    const total = (tonnes as number[]).reduce((s, x) => s + x, 0);
-    push(claim("goods.grossWeight", total, caseSource, t3(total)));
-  }
+  push(caseRecordClaims(caseRecord, caseSource));
 
   for (const s of submissions) {
     if (!s.normalized) continue; // a plain upload: nothing recorded to compare

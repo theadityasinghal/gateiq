@@ -4,6 +4,7 @@ import { and, asc, desc, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import {
+  auditLog,
   caseDocument,
   caseGoodsLine,
   caseMember,
@@ -19,6 +20,8 @@ import type { Role } from "@/lib/roles";
 const consigneeMember = alias(caseMember, "consignee_member");
 const consigneeUser = alias(user, "consignee_user");
 const consigneeProfile = alias(profile, "consignee_profile");
+
+const caseOwner = alias(user, "case_owner");
 
 const consigneeOfCase = and(eq(consigneeMember.caseId, shipmentCase.id), eq(consigneeMember.role, "consignee"));
 
@@ -90,7 +93,7 @@ export type PendingInvite = Awaited<ReturnType<typeof listPendingInvites>>[numbe
 
 const inviter = alias(user, "inviter");
 
-/** Everyone invited to a case, oldest first, with who invited them. */
+/** Everyone invited to a case, oldest first, with who invited them (and the profile details the consignee card needs). */
 export async function listCaseMembers(caseId: string) {
   return db
     .select({
@@ -103,10 +106,14 @@ export async function listCaseMembers(caseId: string) {
       username: user.username,
       role: caseMember.role,
       inviterUsername: inviter.username,
+      legalName: profile.legalName,
+      organisation: profile.organisation,
+      address: profile.address,
     })
     .from(caseMember)
     .innerJoin(user, eq(user.id, caseMember.userId))
     .innerJoin(inviter, eq(inviter.id, caseMember.invitedBy))
+    .leftJoin(profile, eq(profile.userId, caseMember.userId))
     .where(eq(caseMember.caseId, caseId))
     .orderBy(asc(caseMember.createdAt));
 }
@@ -124,8 +131,9 @@ export const getCaseForUser = cache(async (code: string, userId: string) => {
   // looked up by code so they don't wait for the case; they are thrown away unless access is confirmed below.
   const [found, lines] = await Promise.all([
     db
-      .select({ c: shipmentCase, memberId: caseMember.id })
+      .select({ c: shipmentCase, memberId: caseMember.id, ownerName: caseOwner.name, ownerUsername: caseOwner.username })
       .from(shipmentCase)
+      .innerJoin(caseOwner, eq(caseOwner.id, shipmentCase.ownerId))
       .leftJoin(caseMember, and(eq(caseMember.caseId, shipmentCase.id), eq(caseMember.userId, userId), eq(caseMember.status, "accepted")))
       .where(eq(shipmentCase.caseCode, normalized)),
     db
@@ -142,7 +150,7 @@ export const getCaseForUser = cache(async (code: string, userId: string) => {
   if (c.ownerId === userId) access = "owner";
   else if (row.memberId) access = "member";
   else return null;
-  return { ...c, access, lines: lines.map((l) => l.line) };
+  return { ...c, access, lines: lines.map((l) => l.line), owner: { name: row.ownerName, username: row.ownerUsername } };
 });
 
 /**
@@ -182,8 +190,8 @@ const adder = alias(user, "adder");
  * Everything people have added to a case and not taken back, newest first, with who added it
  * (and in what role) and its files. `adderOnCase` is false once the adder has left the case.
  */
-export async function listSubmissions(c: { id: string; ownerId: string }) {
-  const [rows, files, members] = await Promise.all([
+export async function listSubmissions(c: { id: string }) {
+  const [rows, files] = await Promise.all([
     db
       .select({
         id: caseSubmission.id,
@@ -205,12 +213,7 @@ export async function listSubmissions(c: { id: string; ownerId: string }) {
       .where(and(eq(caseSubmission.caseId, c.id), isNull(caseSubmission.removedAt)))
       .orderBy(desc(caseSubmission.createdAt)),
     db.select().from(caseDocument).where(eq(caseDocument.caseId, c.id)).orderBy(asc(caseDocument.createdAt)),
-    db
-      .select({ userId: caseMember.userId })
-      .from(caseMember)
-      .where(and(eq(caseMember.caseId, c.id), eq(caseMember.status, "accepted"))),
   ]);
-  const onCase = new Set([c.ownerId, ...members.map((m) => m.userId)]);
   return rows.flatMap((r) =>
     isDocType(r.type)
       ? [
@@ -218,7 +221,6 @@ export async function listSubmissions(c: { id: string; ownerId: string }) {
             ...r,
             type: r.type as DocType,
             addedByRole: r.addedByRole as Role,
-            adderOnCase: onCase.has(r.addedBy),
             files: files.filter((f) => f.submissionId === r.id),
           },
         ]
@@ -226,35 +228,62 @@ export async function listSubmissions(c: { id: string; ownerId: string }) {
   );
 }
 
-export type Submission = Awaited<ReturnType<typeof listSubmissions>>[number];
+type SubmissionRow = Awaited<ReturnType<typeof listSubmissions>>[number];
+export type Submission = SubmissionRow & { adderOnCase: boolean };
 
-/** Name and username, for showing who owns a case. */
-export async function getUserHandle(userId: string) {
-  const [u] = await db.select({ name: user.name, username: user.username }).from(user).where(eq(user.id, userId));
-  return u ?? null;
+/** Marks each document with whether its adder is still on the case (the owner or an accepted member). */
+export function withAdderOnCase(rows: SubmissionRow[], c: { ownerId: string }, members: Array<{ userId: string; status: string }>): Submission[] {
+  const onCase = new Set([c.ownerId, ...members.filter((m) => m.status === "accepted").map((m) => m.userId)]);
+  return rows.map((r) => ({ ...r, adderOnCase: onCase.has(r.addedBy) }));
 }
 
 /**
- * The consignee linked to a case, if any. Their account details replace the consignee name and
- * address the consignor used to type in. `partyName` is what the shipping bill should show.
+ * The consignee linked to a case, if any, from the members already loaded. Their account details replace the
+ * consignee name and address the consignor used to type in. `partyName` is what the shipping bill should show.
  */
-export async function getCaseConsignee(caseId: string) {
-  const [m] = await db
-    .select({
-      userId: caseMember.userId,
-      status: caseMember.status,
-      name: user.name,
-      username: user.username,
-      legalName: profile.legalName,
-      organisation: profile.organisation,
-      address: profile.address,
-    })
-    .from(caseMember)
-    .innerJoin(user, eq(user.id, caseMember.userId))
-    .leftJoin(profile, eq(profile.userId, caseMember.userId))
-    .where(and(eq(caseMember.caseId, caseId), eq(caseMember.role, "consignee")));
+export function consigneeOf(members: CaseMemberRow[]) {
+  const m = members.find((x) => x.role === "consignee");
   if (!m) return null;
-  return { ...m, partyName: m.organisation || m.legalName || m.name };
+  return {
+    userId: m.userId,
+    status: m.status,
+    name: m.name,
+    username: m.username,
+    legalName: m.legalName,
+    organisation: m.organisation,
+    address: m.address,
+    partyName: m.organisation || m.legalName || m.name,
+  };
 }
 
-export type CaseConsignee = NonNullable<Awaited<ReturnType<typeof getCaseConsignee>>>;
+export type CaseConsignee = NonNullable<ReturnType<typeof consigneeOf>>;
+
+const actor = alias(user, "actor");
+
+/** The audit trail of one case, newest first, with who did it. IP address and browser are never returned. */
+export async function listCaseActivity(caseId: string, limit = 200) {
+  const rows = await db
+    .select({
+      id: auditLog.id,
+      action: auditLog.action,
+      details: auditLog.details,
+      at: auditLog.at,
+      actorName: actor.name,
+      actorUsername: actor.username,
+      actorRole: actor.role,
+    })
+    .from(auditLog)
+    .leftJoin(actor, eq(actor.id, auditLog.actorId))
+    .where(and(eq(auditLog.entityType, "case"), eq(auditLog.entityId, caseId)))
+    .orderBy(desc(auditLog.at))
+    .limit(limit);
+  return rows.map((r) => ({
+    id: r.id,
+    action: r.action,
+    details: r.details,
+    at: r.at,
+    actor: r.actorName ? { name: r.actorName, username: r.actorUsername, role: r.actorRole } : null,
+  }));
+}
+
+export type ActivityItem = Awaited<ReturnType<typeof listCaseActivity>>[number];

@@ -42,7 +42,7 @@ export function ProfileForm({
     <form action={action} className="mt-8 space-y-6" noValidate>
       <input type="hidden" name="returnTo" value={returnTo} />
       <Card className="space-y-5">
-        <Field label="Email" htmlFor="email" aside={badge("email") ?? <VerificationBadge level="self_declared" />} hint="The email you signed up with.">
+        <Field label="Email" htmlFor="email" aside={badge("email") ?? <VerificationBadge level="self_declared" />} hint={returnTo === "profile" ? "Change it in the Email section below." : "The email you signed up with. You can change it later from your profile."}>
           <Input id="email" value={email} disabled readOnly />
         </Field>
         <Field label="Full legal name" htmlFor="legalName" error={err("legalName")} aside={badge("legalName")}
@@ -97,7 +97,7 @@ export function ProfileForm({
           </Field>
           {info.official ? (
             <p className="text-caption text-steel">
-              Official roles can&apos;t be confirmed from any public source. A Terminal Admin will approve them in a later phase.
+              This can&apos;t be confirmed from any public source. A Terminal Admin will confirm it in a later phase.
             </p>
           ) : null}
         </Card>

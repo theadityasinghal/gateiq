@@ -3,22 +3,20 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
-import { findInvitee, inviteToCase, type Invitee } from "@/server/cases/members";
+import { findInvitee, type Invitee } from "@/server/cases/members";
 import { USERNAME_MAX } from "@/lib/username";
-import { CircleCheck, CircleX, Search, Send } from "lucide-react";
+import { CircleX, Search, Send } from "lucide-react";
 
 /** Exact-username lookup first, so the inviter sees the name and account type before sending. */
-export function InviteForm({ caseCode, invitable }: { caseCode: string; invitable: string[] }) {
+export function InviteForm({ caseCode, invitable, onInvite }: { caseCode: string; invitable: string[]; onInvite: (who: Invitee) => void }) {
   const [username, setUsername] = useState("");
   const [found, setFound] = useState<Invitee | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   function onFind(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setSent(null);
     setFound(null);
     start(async () => {
       const r = await findInvitee(caseCode, username);
@@ -27,20 +25,12 @@ export function InviteForm({ caseCode, invitable }: { caseCode: string; invitabl
     });
   }
 
+  // The invite shows in the list at once; the people list rolls it back with a message if the server refuses.
   function onSend() {
     if (!found) return;
-    setError(null);
-    start(async () => {
-      const r = await inviteToCase(caseCode, found.username);
-      if (r.ok) {
-        setSent(`Invite sent to @${r.invitee.username}. They'll see it on their dashboard.`);
-        setFound(null);
-        setUsername("");
-      } else {
-        setError(r.error);
-        setFound(null);
-      }
-    });
+    onInvite(found);
+    setFound(null);
+    setUsername("");
   }
 
   return (
@@ -82,13 +72,12 @@ export function InviteForm({ caseCode, invitable }: { caseCode: string; invitabl
           </div>
           <div className="flex gap-2">
             <Button type="button" variant="ghost" onClick={() => setFound(null)} disabled={pending}>Cancel</Button>
-            <Button type="button" onClick={onSend} disabled={pending}><Send size={16} strokeWidth={1.8} aria-hidden="true" />{pending ? "Sending…" : "Send invite"}</Button>
+            <Button type="button" onClick={onSend}><Send size={16} strokeWidth={1.8} aria-hidden="true" />Send invite</Button>
           </div>
         </div>
       ) : null}
 
       {error ? <p role="alert" className="flex items-center gap-1.5 text-body-sm text-error"><CircleX size={16} strokeWidth={1.8} aria-hidden="true" />{error}</p> : null}
-      {sent ? <p role="status" className="flex items-center gap-1.5 text-body-sm text-tag-green-fg"><CircleCheck size={16} strokeWidth={1.8} aria-hidden="true" />{sent}</p> : null}
     </div>
   );
 }

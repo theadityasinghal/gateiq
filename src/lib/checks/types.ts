@@ -1,5 +1,6 @@
 import type { DocType } from "@/lib/documents";
 import type { Role } from "@/lib/roles";
+import type { FactLevel } from "@/lib/facts/ladder";
 
 /** Who said something: a document on the case, or the consignor's own case record. */
 export type SourceRef = {
@@ -54,11 +55,23 @@ export type ContainerMention = {
 
 export type CheckStatus = "agree" | "mismatch" | "warning" | "single" | "invalid";
 
-export type ValueGroup = { display: string; sources: SourceRef[] };
+export type ValueGroup = {
+  display: string;
+  /** The value itself, so it can be put forward as a verified fact. */
+  value?: ClaimValue;
+  sources: SourceRef[];
+  /** Set when the fact has a verified value: whether this group equals it. */
+  matchesVerified?: boolean;
+};
+
+/** The verified value a result was compared with. */
+export type VerifiedMarker = { factId: string; display: string; level: FactLevel; byName: string; byRole: Role };
 
 export type CheckResult = {
   /** Stable across page loads: fact plus scope, e.g. "container.number@MSKU1234565". */
   key: string;
+  /** "case", or the container number the result is about. */
+  scope?: string;
   fact: FactKey | "derived.vgmVsGross" | "derived.ewbValidity" | "derived.ewbPartB" | "derived.minLaden" | "derived.checkDigit";
   label: string;
   status: CheckStatus;
@@ -69,6 +82,8 @@ export type CheckResult = {
   /** Identifies the exact disagreement; an acknowledgement only holds while this stays the same. */
   valuesKey: string;
   acknowledged?: { note: string; byName: string; at: Date } | null;
+  /** The verified value this fact was compared with, if there is one. */
+  verified?: VerifiedMarker;
 };
 
 export type ContainerReport = { id: string; label: string; checkDigitOk: boolean; results: CheckResult[] };

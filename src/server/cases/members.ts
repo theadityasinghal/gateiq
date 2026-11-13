@@ -6,12 +6,14 @@ import { db } from "@/db";
 import { caseMember, profile, shipmentCase, user } from "@/db/schema";
 import { ONE_PER_CASE, ROLE_INFO, canInvite, invitableRoles, type Role } from "@/lib/roles";
 import { validateUsername } from "@/lib/username";
+import { fail, ok, type ActionResult } from "@/lib/action-result";
 import { requireOnboardedUser, type OnboardedUser } from "@/server/session";
 import { audit } from "@/server/audit";
 import { getCaseForUser, type CaseForUser } from "./service";
 import { removeWithInvitees } from "./membership";
+import { declareConsigneeFact } from "./facts-data";
 
-export type Invitee = { name: string; username: string; roleLabel: string };
+export type Invitee = { name: string; username: string; role: Role; roleLabel: string };
 export type InviteResult = { ok: true; invitee: Invitee; sent?: boolean } | { ok: false; error: string };
 
 const NO_SUCH_USER = "No account has that username. Check the spelling; it has to match exactly.";
@@ -64,7 +66,7 @@ async function checkInvitee(c: CaseForUser, me: OnboardedUser, rawUsername: stri
   }
   return {
     target: { id: target.id, role: target.role },
-    invitee: { name: target.name, username: target.username, roleLabel: ROLE_INFO[target.role].label },
+    invitee: { name: target.name, username: target.username, role: target.role, roleLabel: ROLE_INFO[target.role].label },
   } as const;
 }
 
@@ -124,22 +126,38 @@ export async function inviteToCase(caseCode: string, username: string): Promise<
 }
 
 /** The invitee accepts or declines. Declining deletes the invite, so they can be invited again later. */
-export async function respondToInvite(formData: FormData): Promise<void> {
+export async function respondToInvite(memberId: string, accept: boolean): Promise<ActionResult> {
   const me = await requireOnboardedUser();
-  const memberId = String(formData.get("memberId") ?? "");
-  const accept = formData.get("decision") === "accept";
+  memberId = String(memberId ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(memberId)) return fail("That invite no longer exists.");
   const [row] = await db
-    .select({ id: caseMember.id, caseId: caseMember.caseId, status: caseMember.status, caseCode: shipmentCase.caseCode })
+    .select({ id: caseMember.id, caseId: caseMember.caseId, status: caseMember.status, role: caseMember.role, invitedBy: caseMember.invitedBy, caseCode: shipmentCase.caseCode })
     .from(caseMember)
     .innerJoin(shipmentCase, eq(shipmentCase.id, caseMember.caseId))
     .where(and(eq(caseMember.id, memberId), eq(caseMember.userId, me.id)));
   if (!row || row.status !== "pending") {
     revalidatePath("/", "layout");
-    return;
+    return fail("That invite is no longer waiting for you.");
   }
   await db.transaction(async (tx) => {
     if (accept) {
       await tx.update(caseMember).set({ status: "accepted", respondedAt: new Date() }).where(eq(caseMember.id, row.id));
+      if (row.role === "consignee") {
+        // The consignee's name, as it should appear on the shipping bill, becomes a verified fact: put forward by
+        // them, agreed to by the consignor who invited them.
+        const [[inviter], [prof]] = await Promise.all([
+          tx.select({ role: user.role }).from(user).where(eq(user.id, row.invitedBy)),
+          tx.select({ organisation: profile.organisation, legalName: profile.legalName }).from(profile).where(eq(profile.userId, me.id)),
+        ]);
+        if (inviter?.role) {
+          await declareConsigneeFact(tx, {
+            caseId: row.caseId,
+            caseCode: row.caseCode,
+            consignee: { id: me.id, role: me.role, partyName: prof?.organisation || prof?.legalName || me.name },
+            inviter: { id: row.invitedBy, role: inviter.role },
+          });
+        }
+      }
     } else {
       await tx.delete(caseMember).where(eq(caseMember.id, row.id));
     }
@@ -156,15 +174,17 @@ export async function respondToInvite(formData: FormData): Promise<void> {
   });
   revalidatePath("/", "layout");
   revalidatePath(`/cases/${row.caseCode}`, "layout");
+  return ok;
 }
 
 /**
  * Cancels a pending invite or removes an accepted member. Allowed for the case owner and for whoever
  * sent the invite. Everyone the removed person invited is removed too.
  */
-export async function removeMember(formData: FormData): Promise<void> {
+export async function removeMember(memberId: string): Promise<ActionResult> {
   const me = await requireOnboardedUser();
-  const memberId = String(formData.get("memberId") ?? "");
+  memberId = String(memberId ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(memberId)) return ok;
   const [row] = await db
     .select({
       id: caseMember.id,
@@ -178,9 +198,10 @@ export async function removeMember(formData: FormData): Promise<void> {
     .from(caseMember)
     .innerJoin(shipmentCase, eq(shipmentCase.id, caseMember.caseId))
     .where(eq(caseMember.id, memberId));
-  if (!row || (me.id !== row.ownerId && me.id !== row.invitedBy)) return;
+  if (!row) return ok; // already gone
+  if (me.id !== row.ownerId && me.id !== row.invitedBy) return fail("Only the case owner or whoever invited them can remove this person.");
   // An inviter who has since lost access can't act on the case any more.
-  if (me.id !== row.ownerId && !(await getCaseForUser(row.caseCode, me.id))) return;
+  if (me.id !== row.ownerId && !(await getCaseForUser(row.caseCode, me.id))) return fail("You don't have access to this case.");
 
   await db.transaction(async (tx) => {
     const removed = await removeWithInvitees(tx, row.caseId, [row.userId]);
@@ -205,4 +226,5 @@ export async function removeMember(formData: FormData): Promise<void> {
   });
   revalidatePath(`/cases/${row.caseCode}`, "layout");
   revalidatePath("/", "layout");
+  return ok;
 }

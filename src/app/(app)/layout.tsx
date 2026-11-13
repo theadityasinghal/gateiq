@@ -4,6 +4,7 @@ import { UserMenu } from "@/components/user-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TeamCredit } from "@/components/team-credit";
 import { NavProvider } from "@/components/app-shell";
+import { ToastProvider } from "@/components/toast";
 import { AppSidebar, NavToggleGate } from "@/components/app-sidebar";
 import { SidebarSkeleton } from "@/components/sidebar-nav";
 
@@ -14,6 +15,7 @@ export const instant = false;
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <NavProvider>
+      <ToastProvider>
       <div className="flex min-h-dvh flex-col bg-canvas">
         {/* Named so page transitions leave the header where it is. */}
         <header className="sticky top-0 z-20 border-b border-hairline bg-canvas" style={{ viewTransitionName: "site-header" }}>
@@ -44,6 +46,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </div>
+      </ToastProvider>
     </NavProvider>
   );
 }

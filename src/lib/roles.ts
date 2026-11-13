@@ -28,25 +28,28 @@ export type IdField = {
 
 export const ROLE_INFO: Record<
   Role,
-  { label: string; blurb: string; tint: Tint; official: boolean; idField?: IdField }
+  { label: string; blurb: string; tint: Tint; official: boolean; available: boolean; idField?: IdField }
 > = {
   consignor: {
     label: "Consignor / Exporter",
     blurb: "Create shipment cases and record what you filed on ICEGATE.",
     tint: "lavender",
     official: false,
+    available: true,
   },
   consignee: {
     label: "Consignee / Buyer",
     blurb: "Receive the goods. The exporter invites you to each case.",
     tint: "mint",
     official: false,
+    available: true,
   },
   cha: {
     label: "Customs House Agent (CHA)",
     blurb: "File declarations on behalf of exporters.",
     tint: "sky",
     official: false,
+    available: true,
     idField: { key: "chaLicence", label: "Customs broker licence no.", placeholder: "As on your CBIC licence" },
   },
   transporter: {
@@ -54,6 +57,7 @@ export const ROLE_INFO: Record<
     blurb: "Assign vehicles and drivers to consignments.",
     tint: "peach",
     official: false,
+    available: true,
     idField: { key: "transporterGstin", label: "Transporter GSTIN", placeholder: "15-character GSTIN" },
   },
   driver: {
@@ -61,13 +65,15 @@ export const ROLE_INFO: Record<
     blurb: "Carry the consignment to the gate.",
     tint: "yellow",
     official: false,
+    available: true,
     idField: { key: "drivingLicence", label: "Driving licence no.", placeholder: "e.g. state code + RTO + year + serial" },
   },
   gate_officer: {
     label: "Gate Entry Officer",
-    blurb: "Check arriving vehicles against the filed record.",
+    blurb: "View every case you are added to: documents, files, verified info, flags and activity. You cannot change anything.",
     tint: "mint",
     official: true,
+    available: true,
     idField: { key: "employeeId", label: "Employee / service ID", placeholder: "As issued by your department" },
   },
   weighbridge_operator: {
@@ -75,6 +81,7 @@ export const ROLE_INFO: Record<
     blurb: "Record measured weights at the terminal.",
     tint: "cream",
     official: true,
+    available: false,
     idField: { key: "employeeId", label: "Employee ID", placeholder: "As issued by the terminal" },
   },
   customs_inspector: {
@@ -82,6 +89,7 @@ export const ROLE_INFO: Record<
     blurb: "Examine consignments selected for inspection.",
     tint: "rose",
     official: true,
+    available: false,
     idField: { key: "employeeId", label: "Employee / service ID", placeholder: "As issued by CBIC" },
   },
   customs_superintendent: {
@@ -89,6 +97,7 @@ export const ROLE_INFO: Record<
     blurb: "Review discrepancies and decide outcomes.",
     tint: "lavender",
     official: true,
+    available: false,
     idField: { key: "employeeId", label: "Employee / service ID", placeholder: "As issued by CBIC" },
   },
   terminal_admin: {
@@ -96,6 +105,7 @@ export const ROLE_INFO: Record<
     blurb: "Manage terminal staff and settings.",
     tint: "sky",
     official: true,
+    available: false,
     idField: { key: "employeeId", label: "Employee ID", placeholder: "As issued by the terminal" },
   },
   vigilance_auditor: {
@@ -103,16 +113,22 @@ export const ROLE_INFO: Record<
     blurb: "Audit decisions and the record trail.",
     tint: "gray",
     official: true,
+    available: false,
     idField: { key: "employeeId", label: "Employee / service ID", placeholder: "As issued by your department" },
   },
 };
 
 /**
- * Account types a person can choose today. The official roles have no screens yet (they can't be invited
- * and can't open a case), and nothing verifies who claims one, so they stay out of sign-up until the gate
- * phase exists and an admin can provision them. Existing accounts keep theirs.
+ * Account types a person can choose today. The gate officer is a view-only account that people on a case invite;
+ * the other official roles have no screens yet and nothing verifies who claims one, so they stay out of sign-up
+ * until an admin can provision them. The type is fixed once chosen.
  */
-export const SELECTABLE_ROLES: readonly Role[] = ROLES.filter((r) => !ROLE_INFO[r].official);
+export const SELECTABLE_ROLES: readonly Role[] = ROLES.filter((r) => ROLE_INFO[r].available);
+
+/** Accounts that can look at everything on a case they are on, but change nothing on it. */
+export function isReadOnly(role: Role): boolean {
+  return role === "gate_officer";
+}
 
 export function isSelectableRole(value: unknown): value is Role {
   return typeof value === "string" && (SELECTABLE_ROLES as readonly string[]).includes(value);
@@ -123,15 +139,16 @@ export function isRole(value: unknown): value is Role {
 }
 
 /**
- * Who can invite whom to a case, down the chain of custody. Officials appear in no list, so they are
- * never invited; they will reach cases through their own screens.
+ * Who can invite whom to a case, down the chain of custody. Anyone who can add to a case can also bring in
+ * a gate officer, who only views. The other officials appear in no list, so they are never invited.
  * The consignee can bring in a CHA and a transporter for buyer-arranged freight (EXW, FCA, FOB).
  */
 export const INVITES: Partial<Record<Role, readonly Role[]>> = {
-  consignor: ["consignee", "cha", "transporter"],
-  consignee: ["cha", "transporter"],
-  cha: ["transporter"],
-  transporter: ["driver"],
+  consignor: ["consignee", "cha", "transporter", "gate_officer"],
+  consignee: ["cha", "transporter", "gate_officer"],
+  cha: ["transporter", "gate_officer"],
+  transporter: ["driver", "gate_officer"],
+  driver: ["gate_officer"],
 };
 
 export function canInvite(from: Role, to: Role): boolean {
@@ -152,26 +169,4 @@ export function roleFields(role: Role): RoleField[] {
   if (role === "consignor") return ["iec", "gstin", "address"];
   if (role === "consignee") return ["organisation", "address"];
   return ["organisation"];
-}
-
-/**
- * What a user loses when switching from one account type to another, in plain words.
- * The role-specific ID (licence, employee ID, …) is always dropped, even when both roles ask for an "employee ID",
- * because it was issued for the old role.
- */
-export function lostOnRoleChange(from: Role, to: Role): string[] {
-  if (from === to) return [];
-  const labels: Record<RoleField, string> = {
-    organisation: "Organisation",
-    iec: "IEC",
-    gstin: "GSTIN",
-    address: "Registered address",
-  };
-  const keep = new Set(roleFields(to));
-  const lost = roleFields(from).filter((f) => !keep.has(f)).map((f) => labels[f]);
-  const id = ROLE_INFO[from].idField;
-  if (id) lost.push(id.label.charAt(0).toUpperCase() + id.label.slice(1));
-  if (from === "consignor") lost.push("All your shipment cases, with their filings and uploaded documents");
-  lost.push("Access to cases shared with you, and every invite you sent");
-  return lost;
 }

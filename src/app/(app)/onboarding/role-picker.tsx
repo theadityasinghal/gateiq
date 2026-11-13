@@ -70,7 +70,7 @@ export function RolePicker({ current }: { current: Role | null }) {
                 <span className="text-body-sm">{info.blurb}</span>
                 {info.official ? (
                   <span>
-                    <Tag tone="gray"><ShieldCheck size={13} strokeWidth={2} aria-hidden="true" />Official role</Tag>
+                    <Tag tone="gray"><ShieldCheck size={13} strokeWidth={2} aria-hidden="true" />View only · added to cases by others</Tag>
                   </span>
                 ) : null}
               </label>

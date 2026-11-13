@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { requireOnboardedUser } from "@/server/session";
 import { getCaseForUser } from "@/server/cases/service";
 import { CASE_STATUS_LABEL, formatDate } from "@/lib/format";
+import { isReadOnly } from "@/lib/roles";
 import { normalizeCaseCode } from "@/lib/case-id";
 import { Tag } from "@/components/ui/badge";
 import { CopyButton } from "@/components/copy-button";
@@ -32,6 +33,7 @@ export default async function CaseLayout({ children, params }: Props) {
           <h1 className="mt-2 font-mono text-[28px] font-semibold tracking-[-0.5px] sm:text-h2">{c.caseCode}</h1>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Tag tone={c.status === "filed_baseline_ready" ? "green" : "orange"}>{CASE_STATUS_LABEL[c.status]}</Tag>
+            {isReadOnly(user.role) ? <Tag tone="gray" title="Your account type can see everything on this case but change nothing">View only</Tag> : null}
             <span className="text-caption text-steel">Created {formatDate(c.createdAt)}</span>
           </div>
         </div>

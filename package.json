@@ -13,6 +13,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "masters:import": "tsx scripts/import-masters/index.ts",
+    "db:wipe": "tsx scripts/wipe-data.ts",
     "mocks:generate": "tsx scripts/mock-assets/generate.ts",
     "mocks:verify": "tsx scripts/mock-assets/verify.ts"
   },

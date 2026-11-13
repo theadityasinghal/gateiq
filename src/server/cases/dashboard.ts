@@ -7,6 +7,7 @@ import { caseFlow, type CaseFlow } from "@/lib/case-flow";
 import { expectedDocuments, isDocType, type DocType } from "@/lib/documents";
 import type { Role } from "@/lib/roles";
 import { computeCheckReport, summarizeReport, type CheckSummary } from "./checks";
+import { loadFacts } from "./facts-data";
 import type { CaseRow } from "./service";
 
 export type DashboardCase = { summary: CheckSummary; flow: CaseFlow };
@@ -14,7 +15,7 @@ export type DashboardCase = { summary: CheckSummary; flow: CaseFlow };
 const adder = alias(user, "adder");
 
 /**
- * Check counts and flow state for every case on the dashboard, from five queries however many cases there
+ * Check counts and flow state for every case on the dashboard, from six queries (seven counting the verified values' confirmations) however many cases there
  * are. (Loading each case on its own took about nine queries per case.) The checks themselves are the same
  * pure engine the case page uses.
  */
@@ -23,7 +24,7 @@ export async function loadDashboardCases(viewer: { role: Role }, cases: CaseRow[
   const ids = cases.map((c) => c.id);
   const ownerIds = [...new Set(cases.map((c) => c.ownerId))];
 
-  const [lines, subs, acks, members, owners] = await Promise.all([
+  const [lines, subs, acks, members, owners, facts] = await Promise.all([
     db.select().from(caseGoodsLine).where(inArray(caseGoodsLine.caseId, ids)),
     db
       .select({
@@ -45,6 +46,7 @@ export async function loadDashboardCases(viewer: { role: Role }, cases: CaseRow[
       .where(inArray(checkAck.caseId, ids)),
     db.select({ caseId: caseMember.caseId }).from(caseMember).where(inArray(caseMember.caseId, ids)),
     db.select({ id: user.id, name: user.name }).from(user).where(inArray(user.id, ownerIds)),
+    loadFacts(ids),
   ]);
 
   const ownerName = new Map(owners.map((o) => [o.id, o.name]));
@@ -57,6 +59,7 @@ export async function loadDashboardCases(viewer: { role: Role }, cases: CaseRow[
       ownerName: ownerName.get(c.ownerId) ?? "Consignor",
       submissions,
       acks: acks.filter((a) => a.caseId === c.id),
+      facts: facts.get(c.id) ?? [],
     });
     const summary = summarizeReport(report, submissions.length, viewer.role);
     const flow = caseFlow({

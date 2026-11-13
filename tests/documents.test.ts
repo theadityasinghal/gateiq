@@ -36,7 +36,7 @@ describe("who can add which document", () => {
     expect(addableTypes("cha")).toEqual(["shipping_bill", "form_13", "vgm_declaration", "commercial_invoice", "packing_list"]);
   });
 
-  it("lets drivers and officials add nothing yet", () => {
+  it("lets drivers and officials add nothing", () => {
     expect(addableTypes("driver")).toEqual([]);
     for (const role of ROLES) if (ROLE_INFO[role].official) expect(addableTypes(role)).toEqual([]);
   });

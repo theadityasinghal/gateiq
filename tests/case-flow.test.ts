@@ -54,4 +54,9 @@ describe("case flow", () => {
     expect(f.next).toBe("Fix or explain 2 checks on your documents.");
     expect(f.steps.find((s) => s.key === "checks")).toMatchObject({ state: "current", detail: "3 open checks" });
   });
+
+  it("tells a read-only viewer there is nothing to add, and counts the flags", () => {
+    expect(caseFlow({ ...base, role: "gate_officer", issues: { toFix: 1, worthALook: 1, forYou: 0 } }).next).toBe("Nothing to add. 2 open flags to review.");
+    expect(caseFlow({ ...base, role: "gate_officer", issues: clean }).next).toBe("Nothing to add. No open flags.");
+  });
 });

@@ -8,7 +8,7 @@ import { Field, Input } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 import { PhoneInput } from "@/components/phone-input";
 import { DEFAULT_PHONE_COUNTRY, type PhoneCountry } from "@/lib/phone";
-import { USERNAME_MAX, validateUsername } from "@/lib/username";
+import { USERNAME_MAX, normalizeUsername, validateUsername } from "@/lib/username";
 import { CircleX, LogIn, UserPlus } from "lucide-react";
 
 /** Only same-site relative paths are accepted as a post-login destination. */
@@ -30,6 +30,7 @@ export function AuthForm({ countries }: { countries: PhoneCountry[] }) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const email = String(form.get("email") ?? "").trim();
+    const signInName = normalizeUsername(form.get("signInUsername"));
     const password = String(form.get("password") ?? "");
     const name = String(form.get("name") ?? "").trim();
     const phone = String(form.get("phone") ?? "").trim();
@@ -44,20 +45,27 @@ export function AuthForm({ countries }: { countries: PhoneCountry[] }) {
       if (password !== form.get("confirm")) return setError("The two passwords don't match.");
     }
 
+    if (mode === "sign-in" && (!signInName || !password)) return setError("Enter your username and password.");
+
     setPending(true);
     setError(null);
     const res =
       mode === "sign-up"
         ? await authClient.signUp.email({ name, email, password, phone, phoneCountry, username: handle.ok ? handle.username : "" })
-        : await authClient.signIn.email({ email, password });
+        : await authClient.signIn.username({ username: signInName, password });
     if (res.error) {
       setPending(false);
+      const code = res.error.code ?? "";
       setError(
-        res.error.status === 401 || res.error.code === "INVALID_EMAIL_OR_PASSWORD"
-          ? "That email and password don't match."
-          : res.error.code === "USER_ALREADY_EXISTS" || res.error.code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL"
-            ? "An account with this email already exists. Sign in instead."
-            : (res.error.message ?? "Something went wrong. Please try again."),
+        res.error.status === 429
+          ? "Too many attempts. Wait a minute and try again."
+          : res.error.status === 401 || code === "INVALID_USERNAME_OR_PASSWORD"
+            ? "That username and password don't match."
+            : res.error.status === 422
+              ? "That isn't a valid username. Use the username you chose at sign-up, not your email."
+              : code === "USER_ALREADY_EXISTS" || code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL"
+                ? "An account with this email already exists. Sign in with its username instead."
+                : (res.error.message ?? "Something went wrong. Please try again."),
       );
       return;
     }
@@ -75,7 +83,7 @@ export function AuthForm({ countries }: { countries: PhoneCountry[] }) {
     <div>
       <h2 className="text-h3">{mode === "sign-in" ? "Sign in to GateIQ" : "Create your account"}</h2>
       <p className="mt-2 text-slate">
-        {mode === "sign-in" ? "Use the email and password you signed up with." : "After this, you choose your account type and fill in your profile."}
+        {mode === "sign-in" ? "Use your username and password." : "After this, you choose your account type and fill in your profile."}
       </p>
 
       <div className="mt-6 flex gap-1 rounded-md bg-surface p-1" role="tablist">
@@ -102,8 +110,13 @@ export function AuthForm({ countries }: { countries: PhoneCountry[] }) {
             <Input id="name" name="name" autoComplete="name" required />
           </Field>
         ) : null}
+        {mode === "sign-in" ? (
+          <Field label="Username" htmlFor="signInUsername">
+            <Input id="signInUsername" name="signInUsername" autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="e.g. priya.exports" required />
+          </Field>
+        ) : null}
         {mode === "sign-up" ? (
-          <Field label="Username" htmlFor="username" hint="Others use this to add you to cases. It can't be changed later.">
+          <Field label="Username" htmlFor="username" hint="You sign in with it and others use it to add you to cases. It can't be changed, ever.">
             <Input
               id="username"
               name="username"
@@ -116,9 +129,11 @@ export function AuthForm({ countries }: { countries: PhoneCountry[] }) {
             />
           </Field>
         ) : null}
-        <Field label="Email" htmlFor="email">
-          <Input id="email" name="email" type="email" autoComplete="email" inputMode="email" required />
-        </Field>
+        {mode === "sign-up" ? (
+          <Field label="Email" htmlFor="email" hint="Not used to sign in. You can change it later.">
+            <Input id="email" name="email" type="email" autoComplete="email" inputMode="email" required />
+          </Field>
+        ) : null}
         {mode === "sign-up" ? (
           <Field label="Mobile number" htmlFor="phone" hint="Choose the country code, then type the number.">
             <PhoneInput countries={countries} defaultCountry={DEFAULT_PHONE_COUNTRY} />

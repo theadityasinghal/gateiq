@@ -3,14 +3,12 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { and, eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { caseDocument, fieldVerification, profile, shipmentCase, user } from "@/db/schema";
+import { fieldVerification, profile, user } from "@/db/schema";
 import { ROLES, ROLE_INFO, isSelectableRole, roleFields } from "@/lib/roles";
 import { getCurrentUser } from "@/server/session";
 import { audit } from "@/server/audit";
-import { removeObjects } from "@/server/storage";
-import { removeUserFromAllCases } from "@/server/cases/membership";
 import { verifyProfile } from "./profile-verification";
 
 export type FormState = {
@@ -21,7 +19,7 @@ export type FormState = {
   values?: Record<string, string>;
 };
 
-/** Onboarding step 1. Once a profile exists, account type changes go through changeRole on /profile. */
+/** Onboarding step 1. The account type is fixed once chosen: there is no way to change it later. */
 export async function chooseRole(_prev: FormState, formData: FormData): Promise<FormState> {
   const current = await getCurrentUser();
   if (!current) redirect("/sign-in");
@@ -34,81 +32,6 @@ export async function chooseRole(_prev: FormState, formData: FormData): Promise<
   await audit({ actorId: current.id, action: "user.role_set", entityType: "user", entityId: current.id, details: { from: current.role, to: role } });
   revalidatePath("/", "layout");
   redirect("/onboarding/profile");
-}
-
-/**
- * Switches account type. Everything tied to the old type is deleted: its profile fields, their
- * verification results, the role-specific ID, and (for consignors) every case the user owns.
- */
-export async function changeRole(_prev: FormState, formData: FormData): Promise<FormState> {
-  const current = await getCurrentUser();
-  if (!current) redirect("/sign-in");
-  if (!current.role || !current.hasProfile) redirect("/onboarding");
-  const parsed = z.enum(ROLES).safeParse(formData.get("role"));
-  if (!parsed.success || !isSelectableRole(parsed.data)) return { error: "Choose one of the account types." };
-  const from = current.role;
-  const to = parsed.data;
-  if (from === to) return { error: "That is already your account type." };
-  if (formData.get("confirm") !== "yes") return { error: "Tick the box to confirm you understand what will be deleted." };
-
-  const keep = new Set(roleFields(to));
-  const cleared = roleFields(from).filter((f) => !keep.has(f));
-  const oldIdKey = ROLE_INFO[from].idField?.key;
-  const clearedChecks: string[] = [...cleared, ...(oldIdKey ? [oldIdKey] : [])];
-
-  const docPaths: string[] = [];
-  const deletedCases: string[] = [];
-
-  await db.transaction(async (tx) => {
-    if (from === "consignor") {
-      const cases = await tx
-        .select({ id: shipmentCase.id, code: shipmentCase.caseCode })
-        .from(shipmentCase)
-        .where(eq(shipmentCase.ownerId, current.id));
-      if (cases.length) {
-        const ids = cases.map((c) => c.id);
-        const docs = await tx.select({ path: caseDocument.storagePath }).from(caseDocument).where(inArray(caseDocument.caseId, ids));
-        docPaths.push(...docs.map((d) => d.path));
-        deletedCases.push(...cases.map((c) => c.code));
-        // Goods lines, submissions and their files cascade from the case.
-        await tx.delete(shipmentCase).where(and(eq(shipmentCase.ownerId, current.id), inArray(shipmentCase.id, ids)));
-      }
-    }
-
-    // Invites were made for the old account type, so access through them ends too.
-    const leftCases = await removeUserFromAllCases(tx, current.id);
-
-    await tx
-      .update(profile)
-      .set({ ...Object.fromEntries(cleared.map((f) => [f, null])), extra: {}, updatedAt: new Date() })
-      .where(eq(profile.userId, current.id));
-    if (clearedChecks.length) {
-      await tx
-        .delete(fieldVerification)
-        .where(and(eq(fieldVerification.userId, current.id), inArray(fieldVerification.field, clearedChecks)));
-    }
-    await tx.update(user).set({ role: to, updatedAt: new Date() }).where(eq(user.id, current.id));
-    await audit(
-      {
-        actorId: current.id,
-        action: "user.role_changed",
-        entityType: "user",
-        entityId: current.id,
-        details: { from, to, clearedFields: clearedChecks, deletedCases, deletedDocuments: docPaths.length, leftCases },
-      },
-      tx,
-    );
-  });
-
-  // Storage is outside the database transaction. A failure here leaves unreachable private files, not exposed ones.
-  try {
-    await removeObjects(docPaths);
-  } catch (e) {
-    console.error("changeRole: could not remove stored documents", e);
-  }
-
-  revalidatePath("/", "layout");
-  redirect("/profile?changed=1");
 }
 
 const optional = z

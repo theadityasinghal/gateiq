@@ -9,6 +9,7 @@ import { describeSizeType, formatContainerNo, isValidContainerNo, suggestContain
 import { FACTS, type Closeness } from "./facts";
 import { extractClaims, type CheckCase, type CheckSubmission } from "./claims";
 import type { CheckAck, CheckReport, CheckResult, CheckStatus, Claim, ContainerMention, ContainerReport, FactKey, SourceRef, ValueGroup } from "./types";
+import type { FactView } from "@/lib/facts/ladder";
 
 export type { CheckCase, CheckSubmission } from "./claims";
 
@@ -85,7 +86,7 @@ function groupClaims(fact: FactKey, claims: Claim[]): Array<{ display: string; c
 }
 
 const toValueGroups = (gs: Array<{ display: string; claims: Claim[] }>): ValueGroup[] =>
-  gs.map((g) => ({ display: g.display, sources: dedupeSources(g.claims.map((c) => c.source)) }));
+  gs.map((g) => ({ display: g.display, value: g.claims[0].value, sources: dedupeSources(g.claims.map((c) => c.source)) }));
 
 function dedupeSources(xs: SourceRef[]): SourceRef[] {
   const seen = new Set<string>();
@@ -105,14 +106,53 @@ const valuesKeyOf = (groups: ValueGroup[]) =>
 
 const ownersOf = (sources: SourceRef[]): Role[] => uniq(sources.map((s) => s.role));
 
-function compareFact(fact: FactKey, claims: Claim[], scopeKey: string, opts: { softVehicle?: boolean } = {}): CheckResult | null {
+
+const LEVEL_WORD: Record<FactView["level"], string> = { declared: "declared", confirmed: "confirmed", source_verified: "source-verified", observed: "observed" };
+
+/**
+ * A fact with a verified value: every document is compared with it, not with the others. Documents that equal
+ * it agree; the rest are wrong or need explaining, and their owners can fix them.
+ */
+function compareWithVerified(
+  base: Pick<CheckResult, "key" | "scope" | "fact" | "label" | "groups" | "valuesKey">,
+  compare: (a: Claim["value"], b: Claim["value"]) => Closeness,
+  groups: Array<{ display: string; claims: Claim[] }>,
+  valueGroups: ValueGroup[],
+  v: FactView,
+  softVehicle?: boolean,
+): CheckResult {
+  const closeness = groups.map((g) => compare(v.value, g.claims[0].value));
+  const verified = { factId: v.id, display: v.display, level: v.level, byName: v.setBy.name, byRole: v.setBy.role };
+  const flagged = valueGroups.map((g, i) => ({ ...g, matchesVerified: closeness[i] === 0 }));
+  const valuesKey = `${base.valuesKey}|verified=${v.display}`;
+  const bad = groups.filter((_, i) => closeness[i] !== 0);
+  if (!bad.length) return { ...base, groups: flagged, valuesKey, status: "agree", message: "Matches the verified value.", owners: [], verified };
+  const badClaims = bad.flatMap((g) => g.claims);
+  const allClose = groups.every((_, i) => closeness[i] <= 1);
+  let status: CheckStatus = "mismatch";
+  let message = `The verified value is ${v.display} (${LEVEL_WORD[v.level]}). ${bad.length === 1 ? "This differs" : "These differ"}: whoever added ${bad.length === 1 ? "it" : "them"} can fix it.`;
+  if (allClose) {
+    status = "warning";
+    message = `Written differently from the verified value (${v.display}); probably the same.`;
+  } else if (badClaims.every((c) => c.loose)) {
+    status = "warning";
+    message = `Only the LR's charged weight differs from the verified value (${v.display}); that is often rounded up for billing.`;
+  } else if (softVehicle) {
+    status = "warning";
+    message = `Verified value is ${v.display}. Several trucks: fine if the containers travel separately, otherwise check Part B.`;
+  }
+  return { ...base, groups: flagged, valuesKey, status, message, owners: ownersOf(dedupeSources(badClaims.map((c) => c.source))), verified };
+}
+
+function compareFact(fact: FactKey, claims: Claim[], scopeKey: string, opts: { softVehicle?: boolean; verified?: FactView } = {}): CheckResult | null {
   if (!claims.length) return null;
   const spec = FACTS[fact];
   const groups = groupClaims(fact, claims);
   const valueGroups = toValueGroups(groups);
   const key = `${fact}@${scopeKey}`;
-  const base = { key, fact, label: spec.label, groups: valueGroups, valuesKey: valuesKeyOf(valueGroups) };
+  const base = { key, scope: scopeKey, fact, label: spec.label, groups: valueGroups, valuesKey: valuesKeyOf(valueGroups) };
   const distinctSources = dedupeSources(claims.map((c) => c.source));
+  if (opts.verified) return compareWithVerified(base, spec.compare, groups, valueGroups, opts.verified, opts.softVehicle);
 
   if (groups.length === 1) {
     if (distinctSources.length === 1) {
@@ -152,8 +192,11 @@ export function runChecks(input: {
   caseOwner: { role: Role; name: string };
   submissions: CheckSubmission[];
   acks?: CheckAck[];
+  /** Verified values on the case. Facts that have one are compared with it; the rest document against document. */
+  facts?: FactView[];
   today?: string;
 }): CheckReport {
+  const facts = input.facts ?? [];
   const today = input.today ?? new Date().toISOString().slice(0, 10);
   const caseSource: SourceRef = { submissionId: null, docType: "case", label: CASE_SOURCE_LABEL, role: input.caseOwner.role, adderName: input.caseOwner.name };
   const ex = extractClaims(input.caseRecord, caseSource, input.submissions);
@@ -169,7 +212,8 @@ export function runChecks(input: {
     const claims = ms.flatMap((m) => m.claims);
     const results: CheckResult[] = [];
     for (const fact of CONTAINER_FACTS) {
-      const r = compareFact(fact, claims.filter((c) => c.fact === fact), label);
+      const verified = facts.find((f) => f.factKey === fact && numbers.includes(f.scope));
+      const r = compareFact(fact, claims.filter((c) => c.fact === fact), label, { verified });
       if (r) results.push(r);
     }
     // Each written number on its own: does its check digit hold?
@@ -214,7 +258,8 @@ export function runChecks(input: {
   /* ── Case-wide facts ── */
   const caseChecks: CheckResult[] = [];
   for (const fact of CASE_FACTS) {
-    const r = compareFact(fact, ex.claims.filter((c) => c.fact === fact), "case", { softVehicle: fact === "vehicle.number" && containers.length > 1 });
+    const verified = facts.find((f) => f.factKey === fact && f.scope === "case");
+    const r = compareFact(fact, ex.claims.filter((c) => c.fact === fact), "case", { softVehicle: fact === "vehicle.number" && containers.length > 1, verified });
     if (r) caseChecks.push(r);
   }
 
