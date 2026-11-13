@@ -51,9 +51,9 @@ async function trySave(s: Parameters<typeof storeSubmission>[0]): Promise<Submis
 }
 
 function done(caseCode: string): never {
-  revalidatePath(`/cases/${caseCode}`);
+  revalidatePath(`/cases/${caseCode}`, "layout");
   revalidatePath("/dashboard");
-  redirect(`/cases/${caseCode}?tab=documents`);
+  redirect(`/cases/${caseCode}/documents`);
 }
 
 /**
@@ -180,7 +180,7 @@ export async function removeSubmission(formData: FormData): Promise<void> {
       tx,
     );
   });
-  revalidatePath(`/cases/${row.caseCode}`);
+  revalidatePath(`/cases/${row.caseCode}`, "layout");
   revalidatePath("/dashboard");
 }
 
@@ -203,6 +203,6 @@ export async function acknowledgeCheck(caseCode: string, _prev: { error?: string
     await tx.insert(checkAck).values({ caseId: c.id, checkKey, valuesKey, note, userId: me.id });
     await audit({ actorId: me.id, action: "case.check_acknowledged", entityType: "case", entityId: c.id, details: { caseCode: c.caseCode, checkKey, note } }, tx);
   });
-  revalidatePath(`/cases/${c.caseCode}`);
+  revalidatePath(`/cases/${c.caseCode}`, "layout");
   return { ok: true };
 }

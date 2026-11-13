@@ -131,6 +131,6 @@ export async function createCase(_prev: CaseFormState, formData: FormData): Prom
     redirect(`/cases/${created.caseCode}?upload=failed`);
   }
 
-  revalidatePath("/dashboard");
+  revalidatePath("/", "layout");
   redirect(`/cases/${created.caseCode}`);
 }

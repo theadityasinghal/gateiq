@@ -23,7 +23,7 @@ export function ChecksTab({ caseCode, report }: { caseCode: string; report: Chec
   const clean = hasAnything && !counts.mismatch && !counts.invalid && !counts.warning;
 
   return (
-    <div className="space-y-6">
+    <div className="animate-rise space-y-6">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <h2 className="text-h5">Checks</h2>
         <StatusCount kind="mismatch" n={counts.mismatch + counts.invalid} />

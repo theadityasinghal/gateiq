@@ -1,5 +1,6 @@
 import "server-only";
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { cache } from "react";
+import { and, asc, desc, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import {
@@ -116,7 +117,7 @@ export type CaseMemberRow = Awaited<ReturnType<typeof listCaseMembers>>[number];
  * Holding a code is never enough: the user must own the case or have accepted an invite to it.
  * Everyone on the case sees everything on it. What they may add depends on their account type (lib/documents).
  */
-export async function getCaseForUser(code: string, userId: string) {
+export const getCaseForUser = cache(async (code: string, userId: string) => {
   const normalized = normalizeCaseCode(code);
   if (!isValidCaseCode(normalized)) return null;
   // One round trip: the case with this user's accepted membership, and its goods lines. The lines are
@@ -142,7 +143,28 @@ export async function getCaseForUser(code: string, userId: string) {
   else if (row.memberId) access = "member";
   else return null;
   return { ...c, access, lines: lines.map((l) => l.line) };
-}
+});
+
+/**
+ * The cases for the sidebar: everything this user owns or has accepted, newest first. Deliberately light
+ * (no joins to people or documents) because it loads on every signed-in page.
+ */
+export const listCaseNav = cache(async (userId: string) =>
+  db
+    .select({
+      id: shipmentCase.id,
+      caseCode: shipmentCase.caseCode,
+      exportPortCode: shipmentCase.exportPortCode,
+      destinationCountry: shipmentCase.destinationCountry,
+      owned: sql<boolean>`${shipmentCase.ownerId} = ${userId}`,
+    })
+    .from(shipmentCase)
+    .leftJoin(caseMember, and(eq(caseMember.caseId, shipmentCase.id), eq(caseMember.userId, userId), eq(caseMember.status, "accepted")))
+    .where(or(eq(shipmentCase.ownerId, userId), isNotNull(caseMember.id)))
+    .orderBy(desc(shipmentCase.createdAt)),
+);
+
+export type CaseNavItem = Awaited<ReturnType<typeof listCaseNav>>[number];
 
 export type CaseForUser = NonNullable<Awaited<ReturnType<typeof getCaseForUser>>>;
 

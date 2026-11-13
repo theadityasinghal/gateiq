@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/card";
 import { StatusCount, iconButtonClass } from "@/components/ui/status";
 import { Tag } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { DocIcon } from "@/components/doc-icon";
 
 /**
  * Everything everyone has added to the case, grouped by document type. Several of one type can sit side
@@ -37,7 +38,7 @@ export function DocumentsTab({
   const shown = DOC_TYPE_KEYS.filter((t) => byType.has(t));
 
   return (
-    <div className="space-y-8">
+    <div className="animate-rise space-y-8">
       {addable.length ? (
         <details className="group relative inline-block">
           <summary className={buttonClass("primary", "list-none cursor-pointer")}>
@@ -49,7 +50,7 @@ export function DocumentsTab({
             {addable.map((t) => (
               <li key={t}>
                 <a href={`/cases/${c.caseCode}/documents/new/${docTypeSlug(t)}`} title={DOC_TYPES[t].blurb} className="flex items-center gap-3 px-4 py-2.5 text-[14px] text-charcoal hover:bg-surface">
-                  <span className="w-12 font-mono text-caption text-steel">{DOC_TYPES[t].short}</span>
+                  <DocIcon type={t} size={18} className="shrink-0 text-steel" />
                   {DOC_TYPES[t].label}
                 </a>
               </li>
@@ -64,6 +65,7 @@ export function DocumentsTab({
           return (
             <section key={t} className="space-y-3">
               <h2 className="flex items-center gap-2 text-h5">
+                <DocIcon type={t} size={20} className="text-steel" />
                 {DOC_TYPES[t].label}
                 {list.length > 1 ? <span className="text-body-sm font-normal text-stone" title="Copies from different people are compared with each other">×{list.length}</span> : null}
               </h2>
@@ -105,7 +107,7 @@ function SubmissionCard({ c, s, viewerId, issues }: { c: CaseForUser; s: Submiss
               </span>
             ) : null}
             {issues ? (
-              <a href={`/cases/${c.caseCode}?tab=checks`} title="Open issues involving this document" className="rounded-sm px-1 hover:bg-surface">
+              <a href={`/cases/${c.caseCode}/checks`} title="Open issues involving this document" className="rounded-sm px-1 hover:bg-surface">
                 <StatusCount kind="mismatch" n={issues} />
               </a>
             ) : null}

@@ -24,7 +24,7 @@ export default async function DashboardPage() {
   const progress = await loadDashboardCases({ role: user.role }, cases);
 
   return (
-    <div className="space-y-10">
+    <div className="animate-rise space-y-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-micro-upper text-steel">{info.label}</p>
@@ -113,7 +113,7 @@ function ChecksCell({ s, caseCode }: { s: CheckSummary | null; caseCode: string 
   if (!s || s.documents === 0) return <span className="text-stone" title="No documents yet">–</span>;
   if (!s.toFix && !s.worthALook) return <StatusIcon kind="agree" />;
   return (
-    <Link href={`/cases/${caseCode}?tab=checks`} className="flex flex-wrap items-center gap-3">
+    <Link href={`/cases/${caseCode}/checks`} className="flex flex-wrap items-center gap-3">
       <StatusCount kind="mismatch" n={s.toFix} />
       <StatusCount kind="warning" n={s.worthALook} />
       {s.forYou ? (
@@ -145,10 +145,10 @@ function CaseTable({ cases, progress }: { cases: CaseRow[]; progress: Progress }
             {cases.map((c) => {
               const p = progress[c.id];
               return (
-                <tr key={c.id} className="border-t border-hairline-soft align-top">
+                <tr key={c.id} className="border-t border-hairline-soft align-top transition-colors duration-150 hover:bg-surface-soft">
                   <td className="px-5 py-4">
-                    <Link href={`/cases/${c.caseCode}`} className="font-mono font-medium text-link-blue">{c.caseCode}</Link>
-                    <p className="mt-1 inline-flex items-center gap-1.5 text-caption text-steel">{c.exportPortCode} <ArrowRight size={12} strokeWidth={1.8} aria-label="to" role="img" /> {countryName(c.destinationCountry)}</p>
+                    <Link href={`/cases/${c.caseCode}`} className="block font-mono font-medium text-link-blue">{c.caseCode}</Link>
+                    <p className="mt-1 flex items-center gap-1.5 text-caption text-steel">{c.exportPortCode} <ArrowRight size={12} strokeWidth={1.8} aria-label="to" role="img" /> {countryName(c.destinationCountry)}</p>
                   </td>
                   <td className="px-5 py-4">{p ? <FlowStrip steps={p.flow.steps} compact /> : null}</td>
                   <td className="max-w-[260px] px-5 py-4 text-charcoal">{p?.flow.next}</td>

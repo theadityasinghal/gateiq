@@ -20,9 +20,9 @@ export function FlowStrip({ steps, compact = false }: { steps: FlowStep[]; compa
   return (
     <div>
       <ol className={cn("grid gap-1.5", compact ? "min-w-[180px]" : "")} style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}>
-        {steps.map((s) => (
+        {steps.map((s, i) => (
           <li key={s.key} title={`${s.label}: ${STATE_WORD[s.state]}${s.detail ? ` · ${s.detail}` : ""}`} className="min-w-0">
-            <span className={cn("block h-1.5 rounded-full", BAR[s.state])} />
+            <span className={cn("animate-grow-x block h-1.5 rounded-full transition-colors duration-500", BAR[s.state])} style={{ animationDelay: `${i * 80}ms` }} />
             {compact ? null : (
               <span className="mt-2 flex items-start gap-1 text-caption">
                 {s.state === "done" ? <Check size={13} strokeWidth={2.4} className="mt-0.5 shrink-0 text-tag-green-fg" aria-hidden="true" /> : null}

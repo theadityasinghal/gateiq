@@ -32,6 +32,35 @@ describe("db client", () => {
     warn.mockRestore();
   });
 
+  it("retries at once a SELECT that never answers, on the next connection", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const calls: string[] = [];
+    const unsafe = (query: string) => {
+      calls.push(query);
+      // The first call hangs forever (a dead connection); the second answers.
+      const p = calls.length === 1 ? new Promise(() => {}) : Promise.resolve([{ ok: 1 }]);
+      return Object.assign(p, { values: () => p });
+    };
+    const wrapped = withReadRetry({ unsafe, begin: vi.fn() } as never, "postgres://x@host/db", 20);
+    const started = Date.now();
+    await expect(wrapped.unsafe("select 1", [])).resolves.toEqual([{ ok: 1 }]);
+    expect(calls).toHaveLength(2);
+    expect(Date.now() - started).toBeLessThan(400); // no 500 ms back-off for a stall
+    warn.mockRestore();
+  });
+
+  it("does not time out writes", async () => {
+    const calls: string[] = [];
+    const unsafe = (query: string) => {
+      calls.push(query);
+      const p = new Promise((r) => setTimeout(() => r([{ ok: 1 }]), 60));
+      return Object.assign(p, { values: () => p });
+    };
+    const wrapped = withReadRetry({ unsafe, begin: vi.fn() } as never, "postgres://x@host/db", 20);
+    await expect(wrapped.unsafe("insert into t values (1)", [])).resolves.toEqual([{ ok: 1 }]);
+    expect(calls).toHaveLength(1);
+  });
+
   it("never retries writes", async () => {
     const { sql, calls } = fakeSql([{ code: "ECONNRESET" }]);
     const wrapped = withReadRetry(sql, "postgres://x@host/db");

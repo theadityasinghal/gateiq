@@ -22,6 +22,7 @@ const TRANSIENT_CODES = new Set([
   "CONNECTION_ENDED",
   "CONNECTION_DESTROYED",
   "CONNECT_TIMEOUT",
+  "QUERY_STALLED", // no answer in time: the connection is probably dead (see withReadRetry)
   "57P01", // admin_shutdown
   "57P03", // cannot_connect_now
   "08000", // connection_exception
@@ -52,17 +53,32 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 type Sql = ReturnType<typeof postgres>;
 
+/** A plain read that hasn't answered after this long is on a connection that died while the function was idle. */
+const READ_STALL_MS = 4000;
+
 /**
  * Wraps `sql.unsafe` (what Drizzle calls for every non-transaction query) so that a SELECT
  * which fails on a dropped connection is retried once on a fresh one, after 500 ms.
+ * A SELECT that doesn't answer at all within `stallMs` is retried at once: the silent kind of dead
+ * connection (a serverless function frozen between requests while the pooler hangs up) never errors, it
+ * just hangs, and the retry opens a new connection because the stuck one is still busy.
  * Writes and anything inside `sql.begin` (transactions) are never retried.
  */
-export function withReadRetry(sql: Sql, url: string): Sql {
+export function withReadRetry(sql: Sql, url: string, stallMs = READ_STALL_MS): Sql {
   const unsafe = sql.unsafe.bind(sql);
   type Mode = "rows" | "values";
 
   const run = async (mode: Mode, args: Parameters<Sql["unsafe"]>) => {
-    const exec = () => (mode === "values" ? unsafe(...args).values() : unsafe(...args));
+    const read = isReadOnly(String(args[0]));
+    const exec = () => {
+      const p = mode === "values" ? unsafe(...args).values() : unsafe(...args);
+      if (!read) return p;
+      let timer: ReturnType<typeof setTimeout>;
+      const stall = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(Object.assign(new Error(`Query had no answer after ${stallMs} ms`), { code: "QUERY_STALLED" })), stallMs);
+      });
+      return Promise.race([p, stall]).finally(() => clearTimeout(timer));
+    };
     // Set GATEIQ_DB_TIMING=1 to log every query's duration (Vercel function logs show where a page spends its time).
     const started = process.env.GATEIQ_DB_TIMING ? performance.now() : 0;
     try {
@@ -71,9 +87,10 @@ export function withReadRetry(sql: Sql, url: string): Sql {
       return result;
     } catch (err) {
       ipv6Hint(url, err);
-      if (!isTransient(err) || !isReadOnly(String(args[0]))) throw err;
-      console.warn(`[db] Transient connection error (${(err as { code?: string }).code}). Retrying read once.`);
-      await sleep(500);
+      if (!isTransient(err) || !read) throw err;
+      const stalled = (err as { code?: string }).code === "QUERY_STALLED";
+      console.warn(`[db] ${stalled ? "Query stalled" : `Transient connection error (${(err as { code?: string }).code})`}. Retrying read once.`);
+      if (!stalled) await sleep(500);
       return exec();
     }
   };
@@ -100,7 +117,7 @@ export function withReadRetry(sql: Sql, url: string): Sql {
 /**
  * Pool settings mirror Dexel's asyncpg pool, adjusted for serverless functions:
  * SSL required, no prepared statements (Supabase's pooler runs in transaction mode),
- * 10 s connect timeout, idle connections closed after 300 s, and a small pool per function instance.
+ * 10 s connect timeout, idle connections closed after 20 s, and a small pool per function instance.
  */
 export function createSql(url = databaseUrl(), opts: { max?: number } = {}): Sql {
   const local = /@(localhost|127\.0\.0\.1|\[::1\])[:/]/.test(url);
@@ -108,8 +125,10 @@ export function createSql(url = databaseUrl(), opts: { max?: number } = {}): Sql
     ssl: local ? false : "require",
     prepare: false,
     connect_timeout: 10,
-    idle_timeout: 300,
-    max_lifetime: 60 * 30,
+    // Close idle connections quickly: a function that sleeps between requests otherwise wakes up holding
+    // connections the pooler has already dropped.
+    idle_timeout: 20,
+    max_lifetime: 60 * 5,
     max: opts.max ?? 5,
     // One query per connection at a time. With more queries in flight than connections, postgres.js
     // otherwise pipelines them on one connection, and Supabase's transaction pooler (port 6543)

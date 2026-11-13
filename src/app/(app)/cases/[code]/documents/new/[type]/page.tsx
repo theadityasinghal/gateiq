@@ -58,7 +58,7 @@ export default async function AddDocumentPage({ params, searchParams }: Props) {
   const c = await getCaseForUser(code, user.id);
   if (!c) notFound();
   const info = DOC_TYPES[type];
-  const back = `/cases/${c.caseCode}?tab=documents`;
+  const back = `/cases/${c.caseCode}/documents`;
 
   const header = (
     <>

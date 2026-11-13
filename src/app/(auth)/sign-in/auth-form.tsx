@@ -23,6 +23,7 @@ export function AuthForm({ countries }: { countries: PhoneCountry[] }) {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>(params.get("mode") === "sign-up" ? "sign-up" : "sign-in");
   const [pending, setPending] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -60,6 +61,7 @@ export function AuthForm({ countries }: { countries: PhoneCountry[] }) {
       );
       return;
     }
+    setSignedIn(true);
     router.replace(mode === "sign-up" ? "/onboarding" : safeNext(params.get("next")));
     router.refresh();
   }
@@ -143,7 +145,7 @@ export function AuthForm({ countries }: { countries: PhoneCountry[] }) {
           </p>
         ) : null}
         <Button type="submit" className="h-11 w-full" disabled={pending}>
-          {pending ? (mode === "sign-in" ? "Signing in…" : "Creating account…") : mode === "sign-in" ? <><LogIn size={16} strokeWidth={1.8} aria-hidden="true" />Sign in</> : <><UserPlus size={16} strokeWidth={1.8} aria-hidden="true" />Create account</>}
+          {pending ? (signedIn ? "Signed in. Loading…" : mode === "sign-in" ? "Signing in…" : "Creating account…") : mode === "sign-in" ? <><LogIn size={16} strokeWidth={1.8} aria-hidden="true" />Sign in</> : <><UserPlus size={16} strokeWidth={1.8} aria-hidden="true" />Create account</>}
         </Button>
       </form>
     </div>

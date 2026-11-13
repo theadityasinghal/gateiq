@@ -1,86 +1,39 @@
 import { notFound, redirect } from "next/navigation";
-import type { Metadata } from "next";
 import { requireOnboardedUser } from "@/server/session";
-import {
-  getCaseConsignee,
-  getCaseForUser,
-  getUserHandle,
-  listCaseMembers,
-  listSubmissions,
-  type CaseConsignee,
-  type CaseForUser,
-  type CaseMemberRow,
-} from "@/server/cases/service";
-import { removeMember } from "@/server/cases/members";
-import { ROLE_INFO, invitableRoles } from "@/lib/roles";
-import { InviteForm } from "./invite-form";
-import { DocumentsTab } from "./documents-tab";
-import { ChecksTab } from "./checks-tab";
-import { computeCheckReport, listCheckAcks, summarizeReport } from "@/server/cases/checks";
-import { caseFlow } from "@/lib/case-flow";
-import { expectedDocuments } from "@/lib/documents";
-import { FlowStrip } from "@/components/flow-strip";
-import { CASE_STATUS_LABEL, countryName, formatDate } from "@/lib/format";
-import { normalizeCaseCode } from "@/lib/case-id";
-import { SegmentedTabs } from "@/components/ui/tabs";
+import { loadCasePage } from "@/server/cases/page-data";
+import type { CaseConsignee, CaseForUser } from "@/server/cases/service";
+import { countryName } from "@/lib/format";
 import { Card } from "@/components/ui/card";
 import { Tag } from "@/components/ui/badge";
-import { CopyButton } from "@/components/copy-button";
-import { ArrowRight, Package, Route, TriangleExclamationPoint, Users } from "lucide-react";
+import { FlowStrip } from "@/components/flow-strip";
+import { ArrowRight, Package, Route, TriangleExclamationPoint } from "lucide-react";
 
 type Props = { params: Promise<{ code: string }>; searchParams: Promise<{ tab?: string; upload?: string }> };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { code } = await params;
-  return { title: normalizeCaseCode(code) };
-}
+/** Where the old `?tab=` links of the one-page case now live. */
+const LEGACY_TAB: Record<string, string> = { documents: "documents", filing: "documents", checks: "checks" };
 
-export default async function CasePage({ params, searchParams }: Props) {
-  const [{ code }, { tab = "product", upload }] = await Promise.all([params, searchParams]);
+/** The case's home: where it is in its flow, then the product it carries. */
+export default async function CaseOverviewPage({ params, searchParams }: Props) {
+  const [{ code }, { tab, upload }] = await Promise.all([params, searchParams]);
   const user = await requireOnboardedUser();
-  const c = await getCaseForUser(code, user.id);
-  if (!c) notFound();
-  const isOwner = c.access === "owner";
-  if (c.caseCode !== code) redirect(`/cases/${c.caseCode}${tab ? `?tab=${tab}` : ""}`);
-
-  const [submissions, members, owner, consignee, acks] = await Promise.all([
-    listSubmissions(c),
-    listCaseMembers(c.id),
-    getUserHandle(c.ownerId),
-    getCaseConsignee(c.id),
-    listCheckAcks(c.id),
-  ]);
-  const report = computeCheckReport({ case: c, consigneeParty: consignee?.partyName ?? null, ownerName: owner?.name ?? "Consignor", submissions, acks });
-  const openIssues = report.counts.mismatch + report.counts.invalid + report.counts.warning;
-  const flow = caseFlow({
-    role: user.role,
-    members: members.length,
-    consigneeLinked: consignee != null,
-    docTypes: submissions.map((s) => s.type),
-    needs: expectedDocuments(c),
-    issues: summarizeReport(report, submissions.length, user.role),
-  });
-  // "filing" was the tab's old name; old links still land on it.
-  const active = tab === "documents" || tab === "filing" ? "documents" : tab === "checks" ? "checks" : "product";
-  const base = `/cases/${c.caseCode}`;
+  const data = await loadCasePage(code, user.id, user.role);
+  if (!data) notFound();
+  const { c, consignee, flow } = data;
+  if (tab && LEGACY_TAB[tab]) redirect(`/cases/${c.caseCode}/${LEGACY_TAB[tab]}`);
+  if (c.caseCode !== code) redirect(`/cases/${c.caseCode}`);
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-micro-upper text-steel">Case ID</p>
-          <h1 className="mt-2 font-mono text-[28px] font-semibold tracking-[-0.5px] sm:text-h2">{c.caseCode}</h1>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Tag tone={c.status === "filed_baseline_ready" ? "green" : "orange"}>{CASE_STATUS_LABEL[c.status]}</Tag>
-            <span className="text-caption text-steel">Created {formatDate(c.createdAt)}</span>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <CopyButton value={c.caseCode} label="Copy Case ID" />
-        </div>
-      </div>
+    <div className="animate-rise space-y-6">
+      {upload === "failed" ? (
+        <p role="alert" className="flex items-start gap-2 rounded-lg bg-tag-red-bg p-4 text-body-sm text-tag-red-fg">
+          <TriangleExclamationPoint size={18} strokeWidth={1.8} className="mt-0.5 shrink-0" aria-hidden="true" />
+          <span>The case was created, but a document failed to upload. Check the storage settings and try again.</span>
+        </p>
+      ) : null}
 
       <Card>
+        <h2 className="mb-4 text-h5">Tracking</h2>
         <FlowStrip steps={flow.steps} />
         <p className="mt-4 flex items-start gap-2 text-body-sm text-charcoal">
           <ArrowRight size={16} strokeWidth={1.8} className="mt-0.5 shrink-0 text-steel" aria-hidden="true" />
@@ -91,110 +44,8 @@ export default async function CasePage({ params, searchParams }: Props) {
         ) : null}
       </Card>
 
-      <People
-        caseCode={c.caseCode}
-        viewerId={user.id}
-        isOwner={isOwner}
-        owner={owner ?? { name: "Unknown", username: null }}
-        members={members}
-        canInvite={invitableRoles(user.role).length > 0}
-        invitable={invitableRoles(user.role).map((r) => ROLE_INFO[r].label)}
-      />
-
-      {upload === "failed" ? (
-        <p role="alert" className="flex items-start gap-2 rounded-lg bg-tag-red-bg p-4 text-body-sm text-tag-red-fg">
-          <TriangleExclamationPoint size={18} strokeWidth={1.8} className="mt-0.5 shrink-0" aria-hidden="true" />
-          <span>The case was created, but a document failed to upload. Check the storage settings and try again.</span>
-        </p>
-      ) : null}
-
-      <SegmentedTabs
-        active={active}
-        tabs={[
-          { key: "product", label: "Product info", href: `${base}?tab=product` },
-          { key: "documents", label: "Documents", href: `${base}?tab=documents`, count: submissions.length },
-          { key: "checks", label: "Checks", href: `${base}?tab=checks`, count: openIssues || undefined },
-        ]}
-      />
-
-      {active === "product" ? <ProductTab c={c} consignee={consignee} /> : null}
-      {active === "documents" ? (
-        <DocumentsTab c={c} submissions={submissions} viewer={{ id: user.id, role: user.role }} issues={report.bySubmission} />
-      ) : null}
-      {active === "checks" ? <ChecksTab caseCode={c.caseCode} report={report} /> : null}
+      <ProductInfo c={c} consignee={consignee} />
     </div>
-  );
-}
-
-function People({
-  caseCode,
-  viewerId,
-  isOwner,
-  owner,
-  members,
-  canInvite,
-  invitable,
-}: {
-  caseCode: string;
-  viewerId: string;
-  isOwner: boolean;
-  owner: { name: string; username: string | null };
-  members: CaseMemberRow[];
-  canInvite: boolean;
-  invitable: string[];
-}) {
-  return (
-    <Card>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h2 className="flex items-center gap-2 text-h5"><Users size={20} strokeWidth={1.8} className="text-steel" aria-hidden="true" />People on this case</h2>
-          <p className="text-body-sm text-slate">Everyone here sees the whole case and everything anyone adds to it. What each person can add depends on their account type.</p>
-        </div>
-      </div>
-      <ul className="divide-y divide-hairline-soft">
-        <li className="flex flex-wrap items-center justify-between gap-2 py-3">
-          <div className="min-w-0">
-            <p className="text-[14px] font-medium text-charcoal">
-              {owner.name} {owner.username ? <span className="font-mono text-steel">@{owner.username}</span> : null}
-            </p>
-            <p className="text-caption text-steel">{ROLE_INFO.consignor.label} · owner</p>
-          </div>
-          <Tag tone="purple">Owner</Tag>
-        </li>
-        {members.map((m) => {
-          const canRemove = isOwner || m.invitedBy === viewerId;
-          return (
-            <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
-              <div className="min-w-0">
-                <p className="text-[14px] font-medium text-charcoal">
-                  {m.name} <span className="font-mono text-steel">@{m.username}</span>
-                  {m.userId === viewerId ? <span className="text-steel"> (you)</span> : null}
-                </p>
-                <p className="text-caption text-steel">
-                  {ROLE_INFO[m.role].label} · invited by @{m.inviterUsername} on {formatDate(m.createdAt)}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Tag tone={m.status === "accepted" ? "green" : "orange"}>{m.status === "accepted" ? "Accepted" : "Invited"}</Tag>
-                {canRemove ? (
-                  <form action={removeMember}>
-                    <input type="hidden" name="memberId" value={m.id} />
-                    <button type="submit" className="min-h-10 rounded-sm px-3 py-2 text-[14px] font-medium text-error active:bg-surface">
-                      {m.status === "pending" ? "Cancel invite" : "Remove"}
-                    </button>
-                  </form>
-                ) : null}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-      {canInvite ? (
-        <div className="mt-4 border-t border-hairline-soft pt-4">
-          <InviteForm caseCode={caseCode} invitable={invitable} />
-        </div>
-      ) : null}
-    </Card>
   );
 }
 
@@ -240,7 +91,7 @@ function ConsigneeCard({ c, consignee }: { c: CaseForUser; consignee: CaseConsig
           {c.consigneeAddress ? <Detail label="Address"><span className="whitespace-pre-line">{c.consigneeAddress}</span></Detail> : null}
           {c.consigneeCountry ? <Detail label="Country">{countryName(c.consigneeCountry)}</Detail> : null}
         </dl>
-        <p className="mt-4 text-caption text-steel">Typed in when the case was created. Invite the consignee by username to link their account.</p>
+        <p className="mt-4 text-caption text-steel">Typed in when the case was created. Invite the consignee by username (People &amp; invites) to link their account.</p>
       </Card>
     );
   }
@@ -249,14 +100,14 @@ function ConsigneeCard({ c, consignee }: { c: CaseForUser; consignee: CaseConsig
       <h2 className="mb-2 text-h5">Consignee</h2>
       <p className="text-body-sm text-slate">
         {c.access === "owner"
-          ? "Not invited yet. Invite your consignee by username in People on this case above."
+          ? "Not invited yet. Invite your consignee by username under People & invites."
           : "The consignor hasn't invited the consignee yet."}
       </p>
     </Card>
   );
 }
 
-function ProductTab({ c, consignee }: { c: CaseForUser; consignee: CaseConsignee | null }) {
+function ProductInfo({ c, consignee }: { c: CaseForUser; consignee: CaseConsignee | null }) {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2">

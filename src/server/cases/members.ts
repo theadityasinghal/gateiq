@@ -119,7 +119,7 @@ export async function inviteToCase(caseCode: string, username: string): Promise<
     return { ok: false, error: `@${r.invitee.username} is already invited.` };
   }
   if (taken) return { ok: false, error: taken };
-  revalidatePath(`/cases/${c.caseCode}`);
+  revalidatePath(`/cases/${c.caseCode}`, "layout");
   return { ok: true, invitee: r.invitee, sent: true };
 }
 
@@ -134,7 +134,7 @@ export async function respondToInvite(formData: FormData): Promise<void> {
     .innerJoin(shipmentCase, eq(shipmentCase.id, caseMember.caseId))
     .where(and(eq(caseMember.id, memberId), eq(caseMember.userId, me.id)));
   if (!row || row.status !== "pending") {
-    revalidatePath("/dashboard");
+    revalidatePath("/", "layout");
     return;
   }
   await db.transaction(async (tx) => {
@@ -154,8 +154,8 @@ export async function respondToInvite(formData: FormData): Promise<void> {
       tx,
     );
   });
-  revalidatePath("/dashboard");
-  revalidatePath(`/cases/${row.caseCode}`);
+  revalidatePath("/", "layout");
+  revalidatePath(`/cases/${row.caseCode}`, "layout");
 }
 
 /**
@@ -203,6 +203,6 @@ export async function removeMember(formData: FormData): Promise<void> {
       tx,
     );
   });
-  revalidatePath(`/cases/${row.caseCode}`);
-  revalidatePath("/dashboard");
+  revalidatePath(`/cases/${row.caseCode}`, "layout");
+  revalidatePath("/", "layout");
 }

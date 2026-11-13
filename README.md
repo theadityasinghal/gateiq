@@ -56,7 +56,7 @@ The app, migrations and import scripts all use the one `SUPABASE_DB` connection 
 
 - SSL is required.
 - Prepared statements are off, because Supabase's pooler runs in transaction mode.
-- Connect timeout is 10 s, and idle connections close after 300 s.
+- Connect timeout is 10 s, and idle connections close after 20 s (a sleeping serverless function would otherwise wake up holding connections the pooler dropped), and a SELECT that gets no answer in 4 s is retried on a fresh connection.
 - A `SELECT` that fails on a dropped connection is retried once after 500 ms. Writes and transactions are never retried, since a write can fail after Postgres has already committed it.
 
 Set `GATEIQ_DB_TIMING=1` to log every query's duration (for finding slow pages in Vercel's function logs).
