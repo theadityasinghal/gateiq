@@ -4,8 +4,8 @@ import { db } from "@/db";
 import { caseSubmission, checkAck, user } from "@/db/schema";
 import { runChecks } from "@/lib/checks/engine";
 import type { CheckAck, CheckReport } from "@/lib/checks/types";
+import type { DocType } from "@/lib/documents";
 import type { Role } from "@/lib/roles";
-import { getCaseConsignee, getCaseForUser, getUserHandle, listSubmissions, type CaseConsignee, type CaseForUser, type Submission } from "./service";
 
 export async function listCheckAcks(caseId: string): Promise<CheckAck[]> {
   const rows = await db
@@ -17,22 +17,31 @@ export async function listCheckAcks(caseId: string): Promise<CheckAck[]> {
   return rows;
 }
 
-/** The cross-document checks for a case, from what is already loaded for the page plus its acknowledgements. */
-export async function getCheckReport(
-  c: CaseForUser,
-  submissions: Submission[],
-  consignee: CaseConsignee | null,
-  ownerName: string,
-): Promise<CheckReport> {
-  const acks = await listCheckAcks(c.id);
+/** What the checks need to know about one case and everything on it. Already loaded by the caller. */
+export type CheckInput = {
+  case: {
+    exportPortCode: string;
+    /** Typed in on cases made before consignees had accounts. */
+    consigneeName: string | null;
+    lines: Array<{ hsCode: string; packages: number; grossWeight: unknown; weightUnit: string }>;
+  };
+  /** The linked consignee's name on the shipping bill, when there is one. */
+  consigneeParty: string | null;
+  ownerName: string;
+  submissions: Array<{ id: string; type: DocType; addedByRole: Role; adderName: string; documentNumber: string | null; normalized: unknown }>;
+  acks: CheckAck[];
+};
+
+/** The cross-document checks for one case. Pure: the page and the dashboard both feed it what they have loaded. */
+export function computeCheckReport(i: CheckInput): CheckReport {
   return runChecks({
     caseRecord: {
-      exportPortCode: c.exportPortCode,
-      consigneeName: consignee?.partyName ?? c.consigneeName ?? null,
-      lines: c.lines.map((l) => ({ hsCode: l.hsCode, packages: l.packages, grossWeight: Number(l.grossWeight), weightUnit: l.weightUnit })),
+      exportPortCode: i.case.exportPortCode,
+      consigneeName: i.consigneeParty ?? i.case.consigneeName ?? null,
+      lines: i.case.lines.map((l) => ({ hsCode: l.hsCode, packages: l.packages, grossWeight: Number(l.grossWeight), weightUnit: l.weightUnit })),
     },
-    caseOwner: { role: "consignor", name: ownerName },
-    submissions: submissions.map((s) => ({
+    caseOwner: { role: "consignor", name: i.ownerName },
+    submissions: i.submissions.map((s) => ({
       id: s.id,
       type: s.type,
       addedByRole: s.addedByRole,
@@ -40,7 +49,7 @@ export async function getCheckReport(
       documentNumber: s.documentNumber,
       normalized: s.normalized,
     })),
-    acks,
+    acks: i.acks,
   });
 }
 
@@ -61,19 +70,15 @@ export async function getOwnSubmissionForCorrection(caseId: string, submissionId
 
 export type CheckSummary = { documents: number; toFix: number; worthALook: number; forYou: number };
 
-/** Open issues on one case, for the dashboard. "forYou" counts those the viewer's account type can fix. */
-export async function summarizeChecks(caseCode: string, viewer: { id: string; role: Role }): Promise<CheckSummary | null> {
-  const c = await getCaseForUser(caseCode, viewer.id);
-  if (!c) return null;
-  const [submissions, consignee, owner] = await Promise.all([listSubmissions(c), getCaseConsignee(c.id), getUserHandle(c.ownerId)]);
-  const r = await getCheckReport(c, submissions, consignee, owner?.name ?? "Consignor");
-  const open = [...r.containers.flatMap((x) => x.results), ...r.caseChecks].filter(
+/** Open issues in one report, for the dashboard. "forYou" counts those the viewer's account type can fix. */
+export function summarizeReport(report: CheckReport, documents: number, viewerRole: Role): CheckSummary {
+  const open = [...report.containers.flatMap((x) => x.results), ...report.caseChecks].filter(
     (x) => (x.status === "mismatch" || x.status === "invalid" || x.status === "warning") && !x.acknowledged,
   );
   return {
-    documents: submissions.length,
+    documents,
     toFix: open.filter((x) => x.status !== "warning").length,
     worthALook: open.filter((x) => x.status === "warning").length,
-    forYou: open.filter((x) => x.owners.includes(viewer.role)).length,
+    forYou: open.filter((x) => x.owners.includes(viewerRole)).length,
   };
 }

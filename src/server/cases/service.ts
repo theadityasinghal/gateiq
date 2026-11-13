@@ -32,6 +32,10 @@ const caseRow = {
   consigneeStatus: consigneeMember.status,
   destinationCountry: shipmentCase.destinationCountry,
   exportPortCode: shipmentCase.exportPortCode,
+  ownerId: shipmentCase.ownerId,
+  hazmat: shipmentCase.hazmat,
+  pharma: shipmentCase.pharma,
+  perishable: shipmentCase.perishable,
   createdAt: shipmentCase.createdAt,
 };
 
@@ -115,21 +119,29 @@ export type CaseMemberRow = Awaited<ReturnType<typeof listCaseMembers>>[number];
 export async function getCaseForUser(code: string, userId: string) {
   const normalized = normalizeCaseCode(code);
   if (!isValidCaseCode(normalized)) return null;
-  const [c] = await db.select().from(shipmentCase).where(eq(shipmentCase.caseCode, normalized));
-  if (!c) return null;
+  // One round trip: the case with this user's accepted membership, and its goods lines. The lines are
+  // looked up by code so they don't wait for the case; they are thrown away unless access is confirmed below.
+  const [found, lines] = await Promise.all([
+    db
+      .select({ c: shipmentCase, memberId: caseMember.id })
+      .from(shipmentCase)
+      .leftJoin(caseMember, and(eq(caseMember.caseId, shipmentCase.id), eq(caseMember.userId, userId), eq(caseMember.status, "accepted")))
+      .where(eq(shipmentCase.caseCode, normalized)),
+    db
+      .select({ line: caseGoodsLine })
+      .from(caseGoodsLine)
+      .innerJoin(shipmentCase, eq(shipmentCase.id, caseGoodsLine.caseId))
+      .where(eq(shipmentCase.caseCode, normalized))
+      .orderBy(asc(caseGoodsLine.lineNo)),
+  ]);
+  const row = found[0];
+  if (!row) return null;
+  const c = row.c;
   let access: "owner" | "member";
-  if (c.ownerId === userId) {
-    access = "owner";
-  } else {
-    const [m] = await db
-      .select({ id: caseMember.id })
-      .from(caseMember)
-      .where(and(eq(caseMember.caseId, c.id), eq(caseMember.userId, userId), eq(caseMember.status, "accepted")));
-    if (!m) return null;
-    access = "member";
-  }
-  const lines = await db.select().from(caseGoodsLine).where(eq(caseGoodsLine.caseId, c.id)).orderBy(asc(caseGoodsLine.lineNo));
-  return { ...c, access, lines };
+  if (c.ownerId === userId) access = "owner";
+  else if (row.memberId) access = "member";
+  else return null;
+  return { ...c, access, lines: lines.map((l) => l.line) };
 }
 
 export type CaseForUser = NonNullable<Awaited<ReturnType<typeof getCaseForUser>>>;

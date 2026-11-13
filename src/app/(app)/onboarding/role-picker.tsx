@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { ROLES, ROLE_INFO, type Role } from "@/lib/roles";
+import { ROLE_INFO, SELECTABLE_ROLES, type Role } from "@/lib/roles";
 import { tintBg } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tag } from "@/components/ui/badge";
@@ -32,7 +32,7 @@ export function RolePicker({ current }: { current: Role | null }) {
       <fieldset>
         <legend className="sr-only">Account type</legend>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {ROLES.map((role) => {
+          {SELECTABLE_ROLES.map((role) => {
             const info = ROLE_INFO[role];
             const checked = selected === role;
             return (

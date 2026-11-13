@@ -83,6 +83,10 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // refresh daily
+    // The session is read from a signed cookie for up to 5 minutes instead of two database reads on every page.
+    // Only the user id is taken from it (src/server/session.ts reads the rest fresh), so a changed role or
+    // profile shows at once. The cost: signing out on another device takes up to 5 minutes to reach this one.
+    cookieCache: { enabled: true, maxAge: 5 * 60 },
   },
   rateLimit: {
     enabled: true,

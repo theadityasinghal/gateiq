@@ -16,14 +16,17 @@ import { ROLE_INFO, invitableRoles } from "@/lib/roles";
 import { InviteForm } from "./invite-form";
 import { DocumentsTab } from "./documents-tab";
 import { ChecksTab } from "./checks-tab";
-import { getCheckReport } from "@/server/cases/checks";
+import { computeCheckReport, listCheckAcks, summarizeReport } from "@/server/cases/checks";
+import { caseFlow } from "@/lib/case-flow";
+import { expectedDocuments } from "@/lib/documents";
+import { FlowStrip } from "@/components/flow-strip";
 import { CASE_STATUS_LABEL, countryName, formatDate } from "@/lib/format";
 import { normalizeCaseCode } from "@/lib/case-id";
 import { SegmentedTabs } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Tag } from "@/components/ui/badge";
 import { CopyButton } from "@/components/copy-button";
-import { Package, Route, TriangleExclamationPoint, Users } from "lucide-react";
+import { ArrowRight, Package, Route, TriangleExclamationPoint, Users } from "lucide-react";
 
 type Props = { params: Promise<{ code: string }>; searchParams: Promise<{ tab?: string; upload?: string }> };
 
@@ -40,14 +43,23 @@ export default async function CasePage({ params, searchParams }: Props) {
   const isOwner = c.access === "owner";
   if (c.caseCode !== code) redirect(`/cases/${c.caseCode}${tab ? `?tab=${tab}` : ""}`);
 
-  const [submissions, members, owner, consignee] = await Promise.all([
+  const [submissions, members, owner, consignee, acks] = await Promise.all([
     listSubmissions(c),
     listCaseMembers(c.id),
     getUserHandle(c.ownerId),
     getCaseConsignee(c.id),
+    listCheckAcks(c.id),
   ]);
-  const report = await getCheckReport(c, submissions, consignee, owner?.name ?? "Consignor");
+  const report = computeCheckReport({ case: c, consigneeParty: consignee?.partyName ?? null, ownerName: owner?.name ?? "Consignor", submissions, acks });
   const openIssues = report.counts.mismatch + report.counts.invalid + report.counts.warning;
+  const flow = caseFlow({
+    role: user.role,
+    members: members.length,
+    consigneeLinked: consignee != null,
+    docTypes: submissions.map((s) => s.type),
+    needs: expectedDocuments(c),
+    issues: summarizeReport(report, submissions.length, user.role),
+  });
   // "filing" was the tab's old name; old links still land on it.
   const active = tab === "documents" || tab === "filing" ? "documents" : tab === "checks" ? "checks" : "product";
   const base = `/cases/${c.caseCode}`;
@@ -67,6 +79,17 @@ export default async function CasePage({ params, searchParams }: Props) {
           <CopyButton value={c.caseCode} label="Copy Case ID" />
         </div>
       </div>
+
+      <Card>
+        <FlowStrip steps={flow.steps} />
+        <p className="mt-4 flex items-start gap-2 text-body-sm text-charcoal">
+          <ArrowRight size={16} strokeWidth={1.8} className="mt-0.5 shrink-0 text-steel" aria-hidden="true" />
+          <span><span className="font-medium">Next for you:</span> {flow.next}</span>
+        </p>
+        {flow.missing.length ? (
+          <p className="mt-1 pl-6 text-caption text-steel">Still expected: {flow.missing.map((n) => n.label.toLowerCase()).join(", ")}.</p>
+        ) : null}
+      </Card>
 
       <People
         caseCode={c.caseCode}

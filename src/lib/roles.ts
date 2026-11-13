@@ -107,6 +107,17 @@ export const ROLE_INFO: Record<
   },
 };
 
+/**
+ * Account types a person can choose today. The official roles have no screens yet (they can't be invited
+ * and can't open a case), and nothing verifies who claims one, so they stay out of sign-up until the gate
+ * phase exists and an admin can provision them. Existing accounts keep theirs.
+ */
+export const SELECTABLE_ROLES: readonly Role[] = ROLES.filter((r) => !ROLE_INFO[r].official);
+
+export function isSelectableRole(value: unknown): value is Role {
+  return typeof value === "string" && (SELECTABLE_ROLES as readonly string[]).includes(value);
+}
+
 export function isRole(value: unknown): value is Role {
   return typeof value === "string" && (ROLES as readonly string[]).includes(value);
 }

@@ -1,4 +1,4 @@
-import { ROLE_INFO, ROLES, lostOnRoleChange } from "@/lib/roles";
+import { ROLE_INFO, SELECTABLE_ROLES, lostOnRoleChange } from "@/lib/roles";
 import { listPhoneCountries } from "@/lib/phone";
 import { requireOnboardedUser } from "@/server/session";
 import { loadProfileForm } from "@/server/onboarding/profile-data";
@@ -14,7 +14,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   const { changed } = await searchParams;
   const { initial, checks } = await loadProfileForm(user);
   const info = ROLE_INFO[user.role];
-  const options = ROLES.filter((r) => r !== user.role).map((r) => ({
+  const options = SELECTABLE_ROLES.filter((r) => r !== user.role).map((r) => ({
     role: r,
     label: ROLE_INFO[r].label,
     lost: lostOnRoleChange(user.role, r),

@@ -137,6 +137,34 @@ export function addableTypes(role: Role): DocType[] {
   return DOC_TYPE_KEYS.filter((t) => canAddDocument(role, t));
 }
 
+/** One thing a case is expected to have: any one of these document types satisfies it. */
+export type DocNeed = { key: string; label: string; anyOf: readonly DocType[] };
+
+/**
+ * What a case should carry before it is ready for the gate: the shipping papers every export needs, plus the
+ * certificates its special-cargo flags call for. Container papers (Form-13, VGM, e-seal) are left out: how many
+ * there are depends on the containers, which only the shipping bill says.
+ */
+export function expectedDocuments(c: { hazmat?: unknown; pharma?: unknown; perishable?: unknown }): DocNeed[] {
+  const needs: DocNeed[] = [
+    { key: "shipping_bill", label: DOC_TYPES.shipping_bill.label, anyOf: ["shipping_bill"] },
+    { key: "commercial_invoice", label: DOC_TYPES.commercial_invoice.label, anyOf: ["commercial_invoice"] },
+    { key: "packing_list", label: DOC_TYPES.packing_list.label, anyOf: ["packing_list"] },
+    { key: "eway_bill", label: DOC_TYPES.eway_bill.label, anyOf: ["eway_bill"] },
+    { key: "lorry_receipt", label: DOC_TYPES.lorry_receipt.label, anyOf: ["lorry_receipt"] },
+  ];
+  if (c.hazmat) needs.push({ key: "msds", label: DOC_TYPES.msds.label, anyOf: ["msds"] });
+  if (c.pharma) needs.push({ key: "temperature_spec", label: DOC_TYPES.temperature_spec.label, anyOf: ["temperature_spec"] });
+  if (c.perishable) needs.push({ key: "perishable_certificate", label: "Perishable certificate", anyOf: ["fumigation_certificate", "quality_certificate"] });
+  return needs;
+}
+
+/** The needs no present document satisfies. */
+export function missingDocuments(needs: readonly DocNeed[], present: Iterable<DocType>): DocNeed[] {
+  const have = new Set(present);
+  return needs.filter((n) => !n.anyOf.some((t) => have.has(t)));
+}
+
 /** URL segment for a type: shipping_bill ↔ shipping-bill. */
 export function docTypeSlug(type: DocType): string {
   return type.replace(/_/g, "-");

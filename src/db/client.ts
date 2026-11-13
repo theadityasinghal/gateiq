@@ -63,8 +63,12 @@ export function withReadRetry(sql: Sql, url: string): Sql {
 
   const run = async (mode: Mode, args: Parameters<Sql["unsafe"]>) => {
     const exec = () => (mode === "values" ? unsafe(...args).values() : unsafe(...args));
+    // Set GATEIQ_DB_TIMING=1 to log every query's duration (Vercel function logs show where a page spends its time).
+    const started = process.env.GATEIQ_DB_TIMING ? performance.now() : 0;
     try {
-      return await exec();
+      const result = await exec();
+      if (started) console.log(`[db-timing] ${Math.round(performance.now() - started)}ms ${String(args[0]).replace(/\s+/g, " ").slice(0, 80)}`);
+      return result;
     } catch (err) {
       ipv6Hint(url, err);
       if (!isTransient(err) || !isReadOnly(String(args[0]))) throw err;

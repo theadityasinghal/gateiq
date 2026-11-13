@@ -6,7 +6,7 @@ import { z } from "zod";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { caseDocument, fieldVerification, profile, shipmentCase, user } from "@/db/schema";
-import { ROLES, ROLE_INFO, roleFields } from "@/lib/roles";
+import { ROLES, ROLE_INFO, isSelectableRole, roleFields } from "@/lib/roles";
 import { getCurrentUser } from "@/server/session";
 import { audit } from "@/server/audit";
 import { removeObjects } from "@/server/storage";
@@ -27,7 +27,7 @@ export async function chooseRole(_prev: FormState, formData: FormData): Promise<
   if (!current) redirect("/sign-in");
   if (current.hasProfile) redirect("/profile");
   const parsed = z.enum(ROLES).safeParse(formData.get("role"));
-  if (!parsed.success) return { error: "Choose one of the account types." };
+  if (!parsed.success || !isSelectableRole(parsed.data)) return { error: "Choose one of the account types." };
   const role = parsed.data;
 
   await db.update(user).set({ role, updatedAt: new Date() }).where(eq(user.id, current.id));
@@ -45,7 +45,7 @@ export async function changeRole(_prev: FormState, formData: FormData): Promise<
   if (!current) redirect("/sign-in");
   if (!current.role || !current.hasProfile) redirect("/onboarding");
   const parsed = z.enum(ROLES).safeParse(formData.get("role"));
-  if (!parsed.success) return { error: "Choose one of the account types." };
+  if (!parsed.success || !isSelectableRole(parsed.data)) return { error: "Choose one of the account types." };
   const from = current.role;
   const to = parsed.data;
   if (from === to) return { error: "That is already your account type." };

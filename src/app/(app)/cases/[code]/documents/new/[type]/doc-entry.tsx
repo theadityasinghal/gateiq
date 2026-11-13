@@ -12,10 +12,12 @@ import { extractDocument, type ExtractState } from "@/server/cases/extraction";
 import { StructuredDocForm } from "./structured-doc-form";
 
 const MAX_BYTES = 3.5 * 1024 * 1024;
+/** Images above this are shrunk too: a smaller file uploads and is read faster, and 2400 px is plenty for print. */
+const SHRINK_ABOVE_BYTES = 1.5 * 1024 * 1024;
 
 /** Phone photos are often bigger than the upload limit: shrink them in the browser first. */
 async function fitImage(file: File): Promise<File> {
-  if (!file.type.startsWith("image/") || file.size <= MAX_BYTES) return file;
+  if (!file.type.startsWith("image/") || file.size <= SHRINK_ABOVE_BYTES) return file;
   const bmp = await createImageBitmap(file);
   const scale = Math.min(1, 2400 / Math.max(bmp.width, bmp.height));
   const c = document.createElement("canvas");
@@ -25,7 +27,7 @@ async function fitImage(file: File): Promise<File> {
   bmp.close();
   for (const q of [0.85, 0.7, 0.55]) {
     const blob = await new Promise<Blob | null>((r) => c.toBlob(r, "image/jpeg", q));
-    if (blob && blob.size <= MAX_BYTES) return new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" });
+    if (blob && blob.size <= MAX_BYTES && blob.size < file.size) return new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" });
   }
   return file;
 }

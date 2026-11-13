@@ -5,8 +5,9 @@ GateIQ checks what was **filed** for a consignment (the shipping bill on ICEGATE
 This phase covers:
 
 - **Email + password sign-in.** Users and password hashes are stored in our own Postgres. Emails are trusted as typed (no verification link or OTP), so they show as *self-declared*.
-- **A permanent username** chosen at sign-up, then **one of 11 account types**, then a role-specific profile. Each identity field shows a verification badge: *owned*, *exists*, *format valid*, *self-declared* or *invalid*.
+- **A permanent username** chosen at sign-up, then **an account type** (consignor, consignee, CHA, transporter or driver; the six official types are hidden until the gate phase exists), then a role-specific profile. Each identity field shows a verification badge: *owned*, *exists*, *format valid*, *self-declared* or *invalid*.
 - **Case creation by the consignor:** route, goods lines, and special cargo (hazmat with MSDS, pharma temperature range, perishable certificates). Each case gets a Case ID like `GIQ-26-7K3M9Q2X`, with a check character that catches typos.
+- **A dashboard that shows each case's flow** (case created, people invited, documents added, checks clean, gate) and the next step for the viewer. A case is expected to carry the shipping bill, invoice, packing list, e-way bill and lorry receipt, plus the certificate its hazmat, pharma or perishable flag calls for.
 - **Inviting people to a case by username.** Each account type can invite only the next ones down the line: consignor → consignee, CHA, transporter; CHA → transporter; transporter → driver. Officials are never invited. Invites show on the invitee's dashboard; once accepted they can view the case. The owner or the inviter can remove someone, which also removes everyone that person invited. A case has at most one consignee, whose company name is compared with the shipping bill.
 - **Recording every document field by field:** shipping bill (with its container block), e-way bill, lorry receipt, Form-13, VGM declaration, e-seal record, invoice and packing list. Each raw entry is kept append-only and hashed, normalised (units to tonnes, dates, names, HS codes, container numbers), and can be corrected; earlier versions stay in the record trail.
 - **Reading documents from photos and PDFs.** A QR code (GST e-invoice, e-way bill) is decoded in the browser first; the rest is read by Gemini into the same form, and the adder confirms every field before it is saved.
@@ -57,6 +58,8 @@ The app, migrations and import scripts all use the one `SUPABASE_DB` connection 
 - Prepared statements are off, because Supabase's pooler runs in transaction mode.
 - Connect timeout is 10 s, and idle connections close after 300 s.
 - A `SELECT` that fails on a dropped connection is retried once after 500 ms. Writes and transactions are never retried, since a write can fail after Postgres has already committed it.
+
+Set `GATEIQ_DB_TIMING=1` to log every query's duration (for finding slow pages in Vercel's function logs).
 
 ## Scripts
 

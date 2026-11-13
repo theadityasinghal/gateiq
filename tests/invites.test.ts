@@ -43,3 +43,12 @@ describe("consignee", () => {
     expect(canInvite("consignee", "consignor")).toBe(false);
   });
 });
+
+describe("account types offered at sign-up", () => {
+  it("leaves out every official role until the gate phase exists", async () => {
+    const { SELECTABLE_ROLES, isSelectableRole } = await import("@/lib/roles");
+    for (const role of ROLES) expect(isSelectableRole(role)).toBe(!ROLE_INFO[role].official);
+    expect(SELECTABLE_ROLES).toEqual(["consignor", "consignee", "cha", "transporter", "driver"]);
+    expect(isSelectableRole("not_a_role")).toBe(false);
+  });
+});
