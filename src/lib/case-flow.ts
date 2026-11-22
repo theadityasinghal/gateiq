@@ -16,6 +16,8 @@ export type CaseFlowInput = {
   members: number;
   /** The consignee has an account on the case (invited or accepted). */
   consigneeLinked: boolean;
+  /** Consignee / buyer name has been declared on the case. */
+  consigneeNamed?: boolean;
   /** Types of the documents currently on the case. */
   docTypes: readonly DocType[];
   needs: readonly DocNeed[];
@@ -61,7 +63,7 @@ export function caseFlow(i: CaseFlowInput): CaseFlow {
   const others = missing.filter((n) => !mine.includes(n));
   let next: string;
   if (isReadOnly(i.role)) next = open > 0 ? `Nothing to add. ${plural(open, "open flag", "open flags")} to review.` : "Nothing to add. No open flags.";
-  else if (i.role === "consignor" && !i.consigneeLinked) next = "Invite your consignee to this case.";
+  else if (i.role === "consignor" && !i.consigneeLinked && !i.consigneeNamed) next = "Invite your consignee to this case.";
   else if (mine.length) next = `Add ${list(mine.map((n) => n.label.toLowerCase()))}.`;
   else if (i.issues && i.issues.forYou > 0) next = `Fix or explain ${plural(i.issues.forYou, "check", "checks")} on your documents.`;
   else if (open > 0) next = `${plural(open, "open check", "open checks")}: the people who added those documents can fix them.`;

@@ -66,6 +66,7 @@ export async function loadDashboardCases(viewer: { role: Role }, cases: CaseRow[
       role: viewer.role,
       members: members.filter((m) => m.caseId === c.id).length,
       consigneeLinked: c.consigneeUsername != null,
+      consigneeNamed: Boolean(c.consigneeName || c.consigneeParty),
       docTypes: submissions.map((s) => s.type),
       needs: expectedDocuments(c),
       issues: summary,

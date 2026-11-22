@@ -60,10 +60,40 @@ export function sourceOf(s: CheckSubmission): SourceRef {
   };
 }
 
-/** KGS and MTS only; other units on the case are skipped rather than guessed. */
+/** Converts common mass units to metric tonnes; non-mass or unrecognised units are skipped. */
 function caseTonnes(amount: number, unit: string): number | null {
-  const u = unit.toUpperCase();
-  return u === "KGS" ? amount / 1000 : u === "MTS" ? amount : null;
+  const u = unit.toUpperCase().trim();
+  switch (u) {
+    case "KGS":
+    case "KG":
+    case "KILOGRAM":
+    case "KILOGRAMS":
+      return amount / 1000;
+    case "MTS":
+    case "MT":
+    case "TON":
+    case "TONS":
+    case "TONNE":
+    case "TONNES":
+      return amount;
+    case "QTL":
+    case "QUINTAL":
+    case "QUINTALS":
+      return amount * 0.1;
+    case "GMS":
+    case "GM":
+    case "GRM":
+    case "GRAM":
+    case "GRAMS":
+      return amount / 1_000_000;
+    case "LBS":
+    case "LBR":
+    case "POUND":
+    case "POUNDS":
+      return amount * 0.00045359237;
+    default:
+      return null;
+  }
 }
 
 /** What the case record itself says (the consignor's declaration when creating the case). */
@@ -131,7 +161,9 @@ export function extractClaims(caseRecord: CheckCase, caseSource: SourceRef, subm
           // Charged weight is often rounded up for billing: it only warns.
           claim("goods.grossWeight", n.chargedWeightT, src, `${t3(n.chargedWeightT)} (charged)`, true),
         );
-        for (const k of n.containerNumbers ?? []) out.mentions.push(mention(src, k, null));
+        for (const k of n.containerNumbers ?? []) {
+          out.mentions.push(mention(src, k, null, [...claim("vehicle.number", n.vehicleNumber, src)]));
+        }
         break;
       }
       case "form_13": {
@@ -142,6 +174,7 @@ export function extractClaims(caseRecord: CheckCase, caseSource: SourceRef, subm
             ...claim("container.sizeType", n.container.isoCode, src),
             ...claim("container.lineSeal", n.container.lineSeal, src),
             ...claim("container.vgm", n.vgmT, src, t3(n.vgmT)),
+            ...claim("vehicle.number", n.vehicleNumber, src),
           ]),
         );
         out.vgms.push({ container: n.container.number, vgmT: n.vgmT, tareT: null, source: src });
@@ -160,7 +193,7 @@ export function extractClaims(caseRecord: CheckCase, caseSource: SourceRef, subm
       case "e_seal": {
         const n = s.normalized as NormalizedESeal;
         push(claim("sb.number", n.sbNumber, src), claim("sb.date", n.sbDate, src), claim("exporter.iec", n.iec, src), claim("vehicle.number", n.truckNumber, src));
-        out.mentions.push(mention(src, n.containerNumber, n.eSealNo));
+        out.mentions.push(mention(src, n.containerNumber, n.eSealNo, [...claim("vehicle.number", n.truckNumber, src)]));
         break;
       }
       case "commercial_invoice": {

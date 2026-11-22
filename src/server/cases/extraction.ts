@@ -6,6 +6,7 @@ import { canAddDocument, isDocType, type DocType } from "@/lib/documents";
 import { DOC_FORMS, type FieldMeta } from "@/lib/doc-forms";
 import { offerFromReading } from "@/lib/extract/postprocess";
 import { EXTRACTION_PROMPT_VERSION } from "@/lib/extract/schema";
+import { currentDateIst } from "@/lib/format";
 import { parseQr, qrAppliesTo } from "@/lib/qr/parse";
 import { requireOnboardedUser } from "@/server/session";
 import { audit } from "@/server/audit";
@@ -72,7 +73,7 @@ export async function extractDocument(caseCode: string, type: DocType, _prev: Ex
     return { error: reading.error };
   }
   const output = reading?.ok ? reading.output : null;
-  const offered = offerFromReading(type, output, qr, new Date().toISOString().slice(0, 10));
+  const offered = offerFromReading(type, output, qr, currentDateIst());
 
   try {
     const [row] = await db

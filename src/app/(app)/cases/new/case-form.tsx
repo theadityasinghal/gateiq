@@ -55,6 +55,8 @@ export function CaseForm({
     exportPortCode: "",
     destinationCountry: "",
     destinationPort: "",
+    consigneeName: "",
+    consigneeAddress: "",
     incoterm: "",
     currency: "",
   });
@@ -99,6 +101,12 @@ export function CaseForm({
           </Field>
           <Field label="Destination port (optional)" htmlFor="destinationPort" error={err("destinationPort")}>
             <Input id="destinationPort" value={f.destinationPort} onChange={set("destinationPort")} />
+          </Field>
+          <Field label="Consignee / Buyer name (optional)" htmlFor="consigneeName" error={err("consigneeName")} hint="For overseas buyers who won't create an account">
+            <Input id="consigneeName" value={f.consigneeName} onChange={set("consigneeName")} placeholder="Overseas company / buyer name" />
+          </Field>
+          <Field label="Consignee address (optional)" htmlFor="consigneeAddress" error={err("consigneeAddress")}>
+            <Input id="consigneeAddress" value={f.consigneeAddress} onChange={set("consigneeAddress")} placeholder="City, street, postal code" />
           </Field>
           <Field label="Incoterm" htmlFor="incoterm" error={err("incoterm")}>
             <Select id="incoterm" value={f.incoterm} onChange={set("incoterm")}>

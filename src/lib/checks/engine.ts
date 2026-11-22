@@ -6,6 +6,7 @@
 import { DOC_TYPES } from "@/lib/documents";
 import type { Role } from "@/lib/roles";
 import { describeSizeType, formatContainerNo, isValidContainerNo, suggestContainerNo, typicalTareT } from "@/lib/iso6346";
+import { currentDateIst } from "@/lib/format";
 import { FACTS, type Closeness } from "./facts";
 import { extractClaims, type CheckCase, type CheckSubmission } from "./claims";
 import type { CheckAck, CheckReport, CheckResult, CheckStatus, Claim, ContainerMention, ContainerReport, FactKey, SourceRef, ValueGroup } from "./types";
@@ -59,10 +60,13 @@ export function linkContainers(mentions: ContainerMention[]): ContainerMention[]
     for (let j = i + 1; j < mentions.length; j++) {
       const a = mentions[i];
       const b = mentions[j];
+      const fromSameDoc = Boolean(a.source.submissionId && a.source.submissionId === b.source.submissionId);
       const sameNo = a.number && b.number && a.number === b.number;
       const sameSeal = a.eSeal && b.eSeal && a.eSeal === b.eSeal;
+      // Do not merge distinct container entries from the same document by typo matching
       const typo =
-        a.number && b.number && oneSlipApart(a.number, b.number) && (!isValidContainerNo(a.number) || !isValidContainerNo(b.number));
+        !fromSameDoc &&
+        Boolean(a.number && b.number && oneSlipApart(a.number, b.number) && (!isValidContainerNo(a.number) || !isValidContainerNo(b.number)));
       if (sameNo || sameSeal || typo) join(i, j);
     }
   }
@@ -197,7 +201,7 @@ export function runChecks(input: {
   today?: string;
 }): CheckReport {
   const facts = input.facts ?? [];
-  const today = input.today ?? new Date().toISOString().slice(0, 10);
+  const today = input.today ?? currentDateIst();
   const caseSource: SourceRef = { submissionId: null, docType: "case", label: CASE_SOURCE_LABEL, role: input.caseOwner.role, adderName: input.caseOwner.name };
   const ex = extractClaims(input.caseRecord, caseSource, input.submissions);
 
@@ -215,6 +219,31 @@ export function runChecks(input: {
       const verified = facts.find((f) => f.factKey === fact && numbers.includes(f.scope));
       const r = compareFact(fact, claims.filter((c) => c.fact === fact), label, { verified });
       if (r) results.push(r);
+    }
+    // Per-container vehicle consistency across Form-13, E-seal, and LR
+    const containerVehicles = new Map<string, SourceRef[]>();
+    for (const m of ms) {
+      for (const cl of m.claims.filter((c) => c.fact === "vehicle.number")) {
+        const v = String(cl.value);
+        containerVehicles.set(v, [...(containerVehicles.get(v) ?? []), cl.source]);
+      }
+    }
+    if (containerVehicles.size > 1) {
+      const vGroups = [...containerVehicles.entries()].map(([vDisplay, vSources]) => ({
+        display: vDisplay,
+        sources: dedupeSources(vSources),
+      }));
+      results.push(
+        check({
+          key: `derived.containerVehicle@${label}`,
+          fact: "derived.containerVehicle",
+          label: "Vehicle mismatch for container",
+          status: "mismatch",
+          message: "Different trucks specified for this container across its Form-13, E-seal, or LR.",
+          groups: vGroups,
+          owners: ownersOf(vGroups.flatMap((g) => g.sources)),
+        }),
+      );
     }
     // Each written number on its own: does its check digit hold?
     for (const n of uniq(numbers)) {

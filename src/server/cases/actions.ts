@@ -75,6 +75,9 @@ export async function createCase(_prev: CaseFormState, formData: FormData): Prom
             caseCode,
             ownerId: me.id,
             status: "filing_pending",
+            consigneeName: data.consigneeName ?? null,
+            consigneeAddress: data.consigneeAddress ?? null,
+            consigneeCountry: data.consigneeName ? data.destinationCountry.toUpperCase() : null,
             originPlace: data.originPlace,
             exportPortCode: data.exportPortCode,
             destinationCountry: data.destinationCountry.toUpperCase(),
@@ -113,7 +116,7 @@ export async function createCase(_prev: CaseFormState, formData: FormData): Prom
           owner: { id: me.id, role: "consignor" },
           record: {
             exportPortCode: data.exportPortCode,
-            consigneeName: null,
+            consigneeName: data.consigneeName ?? null,
             lines: data.lines.map((l) => ({ hsCode: l.hsCode, packages: l.packages, grossWeight: Number(l.grossWeight), weightUnit: l.weightUnit.toUpperCase() })),
           },
         });

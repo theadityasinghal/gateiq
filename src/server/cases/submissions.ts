@@ -155,7 +155,7 @@ export async function addFileDocument(
 }
 
 /**
- * Takes back something you added. Only your own, and only while you are still on the case.
+ * Takes back something you added, or removes any document on a case you own.
  * The row stays (marked removed) so the record trail is complete; it just stops showing.
  */
 export async function removeSubmission(submissionId: string): Promise<ActionResult> {
@@ -163,13 +163,22 @@ export async function removeSubmission(submissionId: string): Promise<ActionResu
   const id = String(submissionId ?? "");
   if (!/^[0-9a-f-]{36}$/i.test(id)) return fail("Not found.");
   const [row] = await db
-    .select({ id: caseSubmission.id, caseId: caseSubmission.caseId, type: caseSubmission.type, addedBy: caseSubmission.addedBy, caseCode: shipmentCase.caseCode })
+    .select({
+      id: caseSubmission.id,
+      caseId: caseSubmission.caseId,
+      type: caseSubmission.type,
+      addedBy: caseSubmission.addedBy,
+      caseCode: shipmentCase.caseCode,
+      ownerId: shipmentCase.ownerId,
+    })
     .from(caseSubmission)
     .innerJoin(shipmentCase, eq(shipmentCase.id, caseSubmission.caseId))
     .where(and(eq(caseSubmission.id, id), isNull(caseSubmission.removedAt)));
   if (!row) return ok; // already gone
-  if (row.addedBy !== me.id) return fail("You can only remove documents you added.");
-  if (!(await getCaseForUser(row.caseCode, me.id))) return fail("You don't have access to this case.");
+  const isOwner = row.ownerId === me.id;
+  const isAdder = row.addedBy === me.id;
+  if (!isAdder && !isOwner) return fail("You can only remove documents you added or on cases you own.");
+  if (!isOwner && !(await getCaseForUser(row.caseCode, me.id))) return fail("You don't have access to this case.");
 
   await db.transaction(async (tx) => {
     await tx

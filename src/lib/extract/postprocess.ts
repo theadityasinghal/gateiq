@@ -7,6 +7,7 @@
 import { GSTIN_RE, VEHICLE_RE } from "@/lib/case-schema";
 import { DOC_FORMS, LOW_CONFIDENCE, type FieldMeta, type FieldSpec } from "@/lib/doc-forms";
 import { docLabelInline, type DocType } from "@/lib/documents";
+import { currentDateIst } from "@/lib/format";
 import { hasContainerFormat, isValidContainerNo, normalizeContainerNo, suggestContainerNo } from "@/lib/iso6346";
 import { gstinCheckChar } from "@/lib/verify/identifiers";
 import { qrAppliesTo, qrDateToIso, type QrReading } from "@/lib/qr/parse";
@@ -94,7 +95,7 @@ function take(f: FieldSpec, cell: Cell | null, path: string, today: string, meta
   return value;
 }
 
-export function offerFromReading(type: DocType, output: unknown, qr: QrReading | null, today: string): Offered {
+export function offerFromReading(type: DocType, output: unknown, qr: QrReading | null, today: string = currentDateIst()): Offered {
   const spec = DOC_FORMS[type];
   if (!spec) throw new Error(`No form for ${type}`);
   const initial: Record<string, unknown> = {};

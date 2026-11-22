@@ -3,6 +3,7 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { caseSubmission, checkAck, user } from "@/db/schema";
 import { runChecks } from "@/lib/checks/engine";
+import { currentDateIst } from "@/lib/format";
 import type { CheckAck, CheckReport } from "@/lib/checks/types";
 import type { DocType } from "@/lib/documents";
 import type { FactView } from "@/lib/facts/ladder";
@@ -54,6 +55,7 @@ export function computeCheckReport(i: CheckInput): CheckReport {
     })),
     acks: i.acks,
     facts: i.facts,
+    today: currentDateIst(),
   });
 }
 

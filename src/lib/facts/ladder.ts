@@ -58,7 +58,7 @@ export const FACT_AUTHORITY: Record<VerifiableFact, readonly Role[]> = {
   "sb.number": EXPORTER_SIDE,
   "sb.date": EXPORTER_SIDE,
   "port.code": EXPORTER_SIDE,
-  "consignee.name": ["consignee"],
+  "consignee.name": ["consignee", "consignor"],
   "vehicle.number": ["transporter"],
   "booking.number": PORT_SIDE,
   "container.sizeType": PORT_SIDE,

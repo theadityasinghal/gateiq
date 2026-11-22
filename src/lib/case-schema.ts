@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { INCOTERM_CODES, PERISHABLE_CERTIFICATES } from "./incoterms";
+import { currentDateIst } from "./format";
 
 const text = (label: string, max = 300) => z.string().trim().min(1, `${label} is required.`).max(max);
 const positive = (label: string) =>
@@ -42,6 +43,8 @@ export const caseSchema = z
       .regex(PORT_RE, "Use the 6-character customs location code, e.g. IN + 3 letters + 1 character."),
     destinationCountry: z.string().trim().length(2, "Choose a country."),
     destinationPort: z.string().trim().max(120).optional().transform((v) => v || undefined),
+    consigneeName: z.string().trim().max(200).optional().transform((v) => v || undefined),
+    consigneeAddress: z.string().trim().max(500).optional().transform((v) => v || undefined),
     incoterm: z.enum(INCOTERM_CODES, { error: "Choose an Incoterm." }),
     currency: z.string().trim().length(3, "Choose a currency."),
     lines: z.array(goodsLineSchema).min(1, "Add at least one goods line.").max(100),
@@ -98,7 +101,7 @@ export const sealNoField = z
 const sbNumberField = z.string().trim().regex(/^\d{5,10}$/, "Shipping bill numbers are 5 to 10 digits.");
 const vehicleField = z.string().trim().transform(compact).pipe(z.string().regex(VEHICLE_RE, "Use the registration as printed, e.g. MH04AB1234."));
 const iecField = z.string().trim().transform(alnum).pipe(z.string().length(10, "IEC is 10 characters."));
-const notFuture = (d: string | null | undefined) => !d || d <= new Date().toISOString().slice(0, 10);
+const notFuture = (d: string | null | undefined) => !d || d <= currentDateIst();
 
 export const sbContainerSchema = z.object({
   containerNo: containerNoField,
@@ -124,7 +127,7 @@ export const shippingBillSchema = z
     containers: z.array(sbContainerSchema).max(50).default([]),
   })
   .refine((s) => s.grossWeight >= s.netWeight, { message: "Gross weight can't be less than net weight.", path: ["grossWeight"] })
-  .refine((s) => s.sbDate <= new Date().toISOString().slice(0, 10), { message: "The date can't be in the future.", path: ["sbDate"] });
+  .refine((s) => s.sbDate <= currentDateIst(), { message: "The date can't be in the future.", path: ["sbDate"] });
 
 export type ShippingBillFormInput = z.infer<typeof shippingBillSchema>;
 
@@ -167,7 +170,7 @@ export const ewayBillSchema = z
       .pipe(z.string().regex(VEHICLE_RE, "Use the registration as printed, e.g. MH04AB1234.").nullable()),
     lines: z.array(ewayLineSchema).min(1, "Add at least one item line.").max(200),
   })
-  .refine((s) => s.ewbDate <= new Date().toISOString().slice(0, 10), { message: "The date can't be in the future.", path: ["ewbDate"] })
+  .refine((s) => s.ewbDate <= currentDateIst(), { message: "The date can't be in the future.", path: ["ewbDate"] })
   .refine((s) => s.docDate <= s.ewbDate, { message: "The document date can't be after the e-way bill date.", path: ["docDate"] })
   .refine((s) => !s.validUntil || s.validUntil >= s.ewbDate, { message: "Valid until can't be before the e-way bill date.", path: ["validUntil"] });
 
@@ -190,7 +193,7 @@ export const lorryReceiptSchema = z
     weightUnit: z.enum(["KGS", "MTS"], { error: "Choose kg or tonnes." }),
     containers: z.array(z.object({ containerNo: containerNoField })).max(4).default([]),
   })
-  .refine((s) => s.lrDate <= new Date().toISOString().slice(0, 10), { message: "The date can't be in the future.", path: ["lrDate"] });
+  .refine((s) => s.lrDate <= currentDateIst(), { message: "The date can't be in the future.", path: ["lrDate"] });
 
 export type LorryReceiptFormInput = z.infer<typeof lorryReceiptSchema>;
 

@@ -57,7 +57,7 @@ const partyName: Comparator = (a, b) => {
   const x = normalizePartyName(String(a));
   const y = normalizePartyName(String(b));
   if (x === y) return 0;
-  const drop = new Set(["PVT", "LTD", "CO", "CORP", "INC", "LLC", "FZE", "FZCO", "GMBH", "THE", "AND"]);
+  const drop = new Set(["PVT", "LTD", "CO", "CORP", "INC", "LLC", "FZE", "FZCO", "GMBH", "THE", "AND", "PLC", "PTE", "BV", "SA", "SAS", "SARL", "AG", "KG", "SDN", "BHD", "SPA"]);
   const words = (s: string) => new Set(s.split(" ").filter((w) => w && !drop.has(w)));
   const xa = words(x);
   const ya = words(y);

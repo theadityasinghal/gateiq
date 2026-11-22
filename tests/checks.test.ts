@@ -224,4 +224,56 @@ describe("cross-document checks", () => {
     expect(find(r, "consignee.name")[0].status).toBe("warning");
     expect(find(r, "invoice.number")[0].status).toBe("warning"); // INV/26/001 vs INV-26-001
   });
+
+  it("does not merge two containers from the same document even if one has a typo of the other", () => {
+    const src: SourceRef = { submissionId: "doc-1", docType: "packing_list", label: "PL1", role: "consignor", adderName: "Asha" };
+    const m1: ContainerMention = { number: GOOD, eSeal: null, source: src, claims: [] };
+    const m2: ContainerMention = { number: TYPO, eSeal: null, source: src, claims: [] };
+    // Mentions from the same document should stay as 2 separate containers
+    expect(linkContainers([m1, m2])).toHaveLength(2);
+  });
+
+  it("flags vehicle mismatch for a single container across Form-13 and E-seal", () => {
+    const f13WithTruck: CheckSubmission = {
+      ...form13,
+      normalized: {
+        ...(form13.normalized as Record<string, unknown>),
+        vehicleNumber: "MH04AB1234",
+      },
+    };
+    const esealDifferentTruck: CheckSubmission = {
+      ...eseal,
+      normalized: {
+        ...(eseal.normalized as Record<string, unknown>),
+        truckNumber: "GJ01CD5678",
+      },
+    };
+    const r = runChecks({
+      caseRecord,
+      caseOwner: owner,
+      submissions: [sb(GOOD), f13WithTruck, esealDifferentTruck],
+      today: "2026-11-09",
+    });
+    const cVehicle = find(r, "derived.containerVehicle");
+    expect(cVehicle).toHaveLength(1);
+    expect(cVehicle[0].status).toBe("mismatch");
+    expect(cVehicle[0].message).toContain("Different trucks specified");
+  });
+
+  it("converts QTL mass unit on case record to tonnes for gross weight comparison", () => {
+    const qtlCase = {
+      exportPortCode: "INNSA1",
+      consigneeName: "Gulf Traders LLC",
+      lines: [{ hsCode: "39011010", packages: 40, grossWeight: 125, weightUnit: "QTL" }], // 125 QTL = 12.5 tonnes
+    };
+    const r = runChecks({
+      caseRecord: qtlCase,
+      caseOwner: owner,
+      submissions: [sb(GOOD)],
+      today: "2026-11-09",
+    });
+    const weightCheck = find(r, "goods.grossWeight")[0];
+    expect(weightCheck.status).toBe("agree");
+    expect(weightCheck.groups[0].display).toBe("12.500 t");
+  });
 });

@@ -72,7 +72,7 @@ export type CheckResult = {
   key: string;
   /** "case", or the container number the result is about. */
   scope?: string;
-  fact: FactKey | "derived.vgmVsGross" | "derived.ewbValidity" | "derived.ewbPartB" | "derived.minLaden" | "derived.checkDigit";
+  fact: FactKey | "derived.vgmVsGross" | "derived.ewbValidity" | "derived.ewbPartB" | "derived.minLaden" | "derived.checkDigit" | "derived.containerVehicle";
   label: string;
   status: CheckStatus;
   message: string;

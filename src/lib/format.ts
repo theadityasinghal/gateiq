@@ -41,6 +41,11 @@ export function dayKey(d: Date | string) {
   return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Kolkata" }).format(date);
 }
 
+/** Current date in Indian Standard Time (IST, UTC+5:30) as YYYY-MM-DD. */
+export function currentDateIst(now: Date = new Date()): string {
+  return dayKey(now);
+}
+
 /** "Today", "Yesterday", or the date, for a YYYY-MM-DD day key. */
 export function dayHeading(key: string, now: Date = new Date()) {
   if (key === dayKey(now)) return "Today";

@@ -55,18 +55,26 @@ export async function storeSubmission(s: NewSubmission) {
     return await db.transaction(async (tx) => {
       let carried: Array<typeof caseDocument.$inferSelect> = [];
       if (s.supersedesId) {
-        const replaced = await tx
-          .update(caseSubmission)
-          .set({ removedAt: new Date(), removedBy: s.actor.id })
+        const [prev] = await tx
+          .select({ addedBy: caseSubmission.addedBy, ownerId: shipmentCase.ownerId })
+          .from(caseSubmission)
+          .innerJoin(shipmentCase, eq(shipmentCase.id, caseSubmission.caseId))
           .where(
             and(
               eq(caseSubmission.id, s.supersedesId),
               eq(caseSubmission.caseId, s.caseId),
               eq(caseSubmission.type, s.type),
-              eq(caseSubmission.addedBy, s.actor.id),
               isNull(caseSubmission.removedAt),
             ),
-          )
+          );
+        if (!prev) throw new SupersededError("The version being corrected is no longer current.");
+        const canSupersede = prev.addedBy === s.actor.id || prev.ownerId === s.actor.id;
+        if (!canSupersede) throw new SupersededError("You can only correct documents you added or on cases you own.");
+
+        const replaced = await tx
+          .update(caseSubmission)
+          .set({ removedAt: new Date(), removedBy: s.actor.id })
+          .where(and(eq(caseSubmission.id, s.supersedesId), isNull(caseSubmission.removedAt)))
           .returning({ id: caseSubmission.id });
         if (!replaced.length) throw new SupersededError("The version being corrected is no longer current.");
         if (!upload && !s.extraction) carried = await tx.select().from(caseDocument).where(eq(caseDocument.submissionId, s.supersedesId));

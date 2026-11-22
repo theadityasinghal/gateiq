@@ -68,16 +68,18 @@ function ConsigneeCard({ c, consignee }: { c: CaseForUser; consignee: CaseConsig
     );
   }
   if (c.consigneeName) {
-    // Cases made before consignees had accounts.
     return (
       <Card>
-        <h2 className="mb-4 text-h5">Consignee</h2>
+        <div className="mb-4 flex items-start justify-between gap-2">
+          <h2 className="text-h5">Consignee</h2>
+          <Tag tone="gray">Declared</Tag>
+        </div>
         <dl className="space-y-3">
           <Detail label="Name">{c.consigneeName}</Detail>
           {c.consigneeAddress ? <Detail label="Address"><span className="whitespace-pre-line">{c.consigneeAddress}</span></Detail> : null}
           {c.consigneeCountry ? <Detail label="Country">{countryName(c.consigneeCountry)}</Detail> : null}
         </dl>
-        <p className="mt-4 text-caption text-steel">Typed in when the case was created. Invite the consignee by username (People &amp; invites) to link their account.</p>
+        <p className="mt-4 text-caption text-steel">Declared by the consignor. If the buyer has a GateIQ account, you can also invite them under People &amp; invites.</p>
       </Card>
     );
   }

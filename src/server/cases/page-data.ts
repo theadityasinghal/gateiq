@@ -26,6 +26,7 @@ export const loadCasePage = cache(async (code: string, userId: string, role: Rol
     role,
     members: members.length,
     consigneeLinked: consignee != null,
+    consigneeNamed: Boolean(c.consigneeName || consignee?.partyName),
     docTypes: submissions.map((s) => s.type),
     needs: expectedDocuments(c),
     issues: summarizeReport(report, submissions.length, role),
