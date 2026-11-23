@@ -89,8 +89,15 @@ function groupClaims(fact: FactKey, claims: Claim[]): Array<{ display: string; c
   return groups;
 }
 
+const isSigned = (c: Claim) => c.source.signedFacts?.includes(c.fact) ?? false;
+
 const toValueGroups = (gs: Array<{ display: string; claims: Claim[] }>): ValueGroup[] =>
-  gs.map((g) => ({ display: g.display, value: g.claims[0].value, sources: dedupeSources(g.claims.map((c) => c.source)) }));
+  gs.map((g) => ({
+    display: g.display,
+    value: g.claims[0].value,
+    sources: dedupeSources(g.claims.map((c) => c.source)),
+    ...(g.claims.some(isSigned) ? { signed: true } : {}),
+  }));
 
 function dedupeSources(xs: SourceRef[]): SourceRef[] {
   const seen = new Set<string>();
@@ -108,10 +115,14 @@ const valuesKeyOf = (groups: ValueGroup[]) =>
     .sort()
     .join("|");
 
-const ownersOf = (sources: SourceRef[]): Role[] => uniq(sources.map((s) => s.role));
+/** Who can fix a problem (by role) and whose papers are behind it (by account). */
+const blame = (sources: SourceRef[]): { owners: Role[]; implicated: string[] } => ({
+  owners: uniq(sources.map((s) => s.role)),
+  implicated: uniq(sources.map((s) => s.adderId)),
+});
 
 
-const LEVEL_WORD: Record<FactView["level"], string> = { declared: "declared", confirmed: "confirmed", source_verified: "source-verified", observed: "observed" };
+const LEVEL_WORD: Record<FactView["level"], string> = { declared: "stated", confirmed: "agreed", source_verified: "signed", observed: "seen at gate" };
 
 /**
  * A fact with a verified value: every document is compared with it, not with the others. Documents that equal
@@ -130,7 +141,18 @@ function compareWithVerified(
   const flagged = valueGroups.map((g, i) => ({ ...g, matchesVerified: closeness[i] === 0 }));
   const valuesKey = `${base.valuesKey}|verified=${v.display}`;
   const bad = groups.filter((_, i) => closeness[i] !== 0);
-  if (!bad.length) return { ...base, groups: flagged, valuesKey, status: "agree", message: "Matches the verified value.", owners: [], verified };
+  // A value a signed e-invoice carries is more than anyone's word: the verified value climbs to "signed".
+  if (v.level !== "observed" && groups.some((g, i) => closeness[i] === 0 && g.claims.some(isSigned))) verified.level = "source_verified";
+  if (!bad.length) {
+    // Agreement with yourself proves nothing: if the only papers that match are the ones the value was taken
+    // from (or the case record it was seeded from), nothing independent backs it up yet.
+    const own = (s: SourceRef) => (s.submissionId ? v.evidence.includes(s.submissionId) : v.evidence.length === 0 && s.adderId === v.setBy.userId);
+    const backing = dedupeSources(groups.flatMap((g) => g.claims.map((c) => c.source)));
+    if (verified.level === "declared" && backing.every(own)) {
+      return { ...base, groups: flagged, valuesKey, status: "single", message: "Only the paper this value was taken from says so.", owners: [], implicated: [], verified };
+    }
+    return { ...base, groups: flagged, valuesKey, status: "agree", message: "Matches the verified value.", owners: [], implicated: [], verified };
+  }
   const badClaims = bad.flatMap((g) => g.claims);
   const allClose = groups.every((_, i) => closeness[i] <= 1);
   let status: CheckStatus = "mismatch";
@@ -145,7 +167,7 @@ function compareWithVerified(
     status = "warning";
     message = `Verified value is ${v.display}. Several trucks: fine if the containers travel separately, otherwise check Part B.`;
   }
-  return { ...base, groups: flagged, valuesKey, status, message, owners: ownersOf(dedupeSources(badClaims.map((c) => c.source))), verified };
+  return { ...base, groups: flagged, valuesKey, status, message, ...blame(dedupeSources(badClaims.map((c) => c.source))), verified };
 }
 
 function compareFact(fact: FactKey, claims: Claim[], scopeKey: string, opts: { softVehicle?: boolean; verified?: FactView } = {}): CheckResult | null {
@@ -160,9 +182,9 @@ function compareFact(fact: FactKey, claims: Claim[], scopeKey: string, opts: { s
 
   if (groups.length === 1) {
     if (distinctSources.length === 1) {
-      return { ...base, status: "single", message: "One source so far.", owners: [] };
+      return { ...base, status: "single", message: "One source so far.", owners: [], implicated: [] };
     }
-    return { ...base, status: "agree", message: "All agree.", owners: [] };
+    return { ...base, status: "agree", message: "All agree.", owners: [], implicated: [] };
   }
 
   // Disagreement. Soften it when it is only "close" or only loose sources differ.
@@ -181,19 +203,20 @@ function compareFact(fact: FactKey, claims: Claim[], scopeKey: string, opts: { s
     status = "warning";
     message = "Several trucks: fine if the containers travel separately, otherwise check Part B.";
   }
-  return { ...base, status, message, owners: ownersOf(distinctSources) };
+  return { ...base, status, message, ...blame(distinctSources) };
 }
 
 function check(
-  partial: Omit<CheckResult, "valuesKey" | "groups" | "owners"> & { groups?: ValueGroup[]; owners?: Role[] },
+  partial: Omit<CheckResult, "valuesKey" | "groups" | "owners" | "implicated"> & { groups?: ValueGroup[]; blamed?: SourceRef[] },
 ): CheckResult {
-  const groups = partial.groups ?? [];
-  return { ...partial, groups, owners: partial.owners ?? [], valuesKey: valuesKeyOf(groups) || partial.message };
+  const { blamed, ...rest } = partial;
+  const groups = rest.groups ?? [];
+  return { ...rest, groups, ...blame(blamed ?? []), valuesKey: valuesKeyOf(groups) || rest.message };
 }
 
 export function runChecks(input: {
   caseRecord: CheckCase;
-  caseOwner: { role: Role; name: string };
+  caseOwner: { id: string; role: Role; name: string };
   submissions: CheckSubmission[];
   acks?: CheckAck[];
   /** Verified values on the case. Facts that have one are compared with it; the rest document against document. */
@@ -202,7 +225,7 @@ export function runChecks(input: {
 }): CheckReport {
   const facts = input.facts ?? [];
   const today = input.today ?? currentDateIst();
-  const caseSource: SourceRef = { submissionId: null, docType: "case", label: CASE_SOURCE_LABEL, role: input.caseOwner.role, adderName: input.caseOwner.name };
+  const caseSource: SourceRef = { submissionId: null, docType: "case", label: CASE_SOURCE_LABEL, role: input.caseOwner.role, adderId: input.caseOwner.id, adderName: input.caseOwner.name };
   const ex = extractClaims(input.caseRecord, caseSource, input.submissions);
 
   /* ── Containers ── */
@@ -241,7 +264,7 @@ export function runChecks(input: {
           status: "mismatch",
           message: "Different trucks specified for this container across its Form-13, E-seal, or LR.",
           groups: vGroups,
-          owners: ownersOf(vGroups.flatMap((g) => g.sources)),
+          blamed: vGroups.flatMap((g) => g.sources),
         }),
       );
     }
@@ -258,7 +281,7 @@ export function runChecks(input: {
           status: "invalid",
           message: `Fails the ISO 6346 check digit: almost certainly mistyped.${sugg.length ? ` Did it mean ${sugg.map(formatContainerNo).join(" / ")}?` : ""}`,
           groups: [{ display: formatContainerNo(n), sources }],
-          owners: ownersOf(sources),
+          blamed: sources,
         }),
       );
     }
@@ -276,7 +299,7 @@ export function runChecks(input: {
             status: "warning",
             message: `Below the ${min} t a laden ${len ?? 20}-ft container weighs: probably the wrong unit.`,
             groups: [{ display: `${v.vgmT.toFixed(3)} t`, sources: [v.source] }],
-            owners: [v.source.role],
+            blamed: [v.source],
           }),
         );
       }
@@ -336,7 +359,7 @@ export function runChecks(input: {
             { display: `${cargoT.toFixed(3)} t (VGM − tare${estimated ? ", tare estimated" : ""})`, sources: dedupeSources(sources.slice(1)) },
             { display: `${sb.grossT.toFixed(3)} t (gross)`, sources: [sb.source] },
           ],
-          owners: within ? [] : ownersOf(dedupeSources(sources)),
+          blamed: within ? [] : dedupeSources(sources),
         }),
       );
     }
@@ -352,7 +375,7 @@ export function runChecks(input: {
           status: "mismatch",
           message: "Expired: extend it within 8 h of expiry or generate a new one. A truck moving on it can be detained.",
           groups: [{ display: `Valid until ${e.validUntil}`, sources: [e.source] }],
-          owners: [e.source.role],
+          blamed: [e.source],
         }),
       );
     } else if (e.validUntil && e.validUntil === today) {
@@ -364,7 +387,7 @@ export function runChecks(input: {
           status: "warning",
           message: "Expires today: extend it from 8 h before expiry if the truck won't arrive in time.",
           groups: [{ display: `Valid until ${e.validUntil}`, sources: [e.source] }],
-          owners: [e.source.role],
+          blamed: [e.source],
         }),
       );
     }
@@ -377,7 +400,7 @@ export function runChecks(input: {
           status: "warning",
           message: "No vehicle yet: not valid on the road until Part B is filled in.",
           groups: [{ display: "No vehicle", sources: [e.source] }],
-          owners: [e.source.role],
+          blamed: [e.source],
         }),
       );
     }
@@ -389,7 +412,7 @@ export function runChecks(input: {
   for (const r of all) {
     if (r.status === "agree" || r.status === "single") continue;
     const a = acks.find((x) => x.checkKey === r.key && x.valuesKey === r.valuesKey);
-    if (a) r.acknowledged = { note: a.note, byName: a.byName, at: a.at };
+    if (a) r.acknowledged = { note: a.note, byName: a.byName, at: a.at, self: a.self };
   }
   const open = all.filter((r) => (r.status === "mismatch" || r.status === "warning" || r.status === "invalid") && !r.acknowledged);
   const bySubmission: Record<string, number> = {};
@@ -404,6 +427,7 @@ export function runChecks(input: {
       warning: open.filter((r) => r.status === "warning").length,
       invalid: open.filter((r) => r.status === "invalid").length,
       acknowledged: all.filter((r) => r.acknowledged).length,
+      single: all.filter((r) => r.status === "single").length,
     },
     bySubmission,
   };

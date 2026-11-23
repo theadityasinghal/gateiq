@@ -22,7 +22,7 @@ export type CaseFlowInput = {
   docTypes: readonly DocType[];
   needs: readonly DocNeed[];
   /** Open issues, or null when nothing has been loaded to check. */
-  issues: { toFix: number; worthALook: number; forYou: number } | null;
+  issues: { toFix: number; worthALook: number; forYou: number; onePaper?: number } | null;
 };
 
 const list = (xs: string[]) => (xs.length <= 2 ? xs.join(" and ") : `${xs.slice(0, 2).join(", ")} and ${xs.length - 2} more`);
@@ -45,7 +45,11 @@ export function caseFlow(i: CaseFlowInput): CaseFlow {
   const detail: Partial<Record<FlowStepKey, string>> = {
     people: done.people ? plural(i.members, "person", "people") : "No one invited yet",
     documents: `${i.needs.length - missing.length} of ${i.needs.length}`,
-    checks: open ? plural(open, "open check", "open checks") : undefined,
+    checks: open
+      ? plural(open, "open check", "open checks")
+      : i.issues?.onePaper && hasDocs
+        ? `${plural(i.issues.onePaper, "value", "values")} on one paper only`
+        : undefined,
   };
   const labels: Record<FlowStepKey, string> = {
     created: "Case created",

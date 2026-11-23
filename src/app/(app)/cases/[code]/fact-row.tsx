@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Check, Eraser, ShieldCheck, TriangleAlert } from "lucide-react";
+import { ReplaceReason } from "@/components/replace-reason";
 import { confirmFact, retireFact } from "@/server/cases/facts";
 import { useOptimisticAction } from "@/lib/use-optimistic-action";
 import type { FactSummary, RowGroup, VerifiedRowData } from "@/lib/facts/rows";
@@ -9,16 +11,16 @@ import { LevelBadge } from "@/components/fact-level-badge";
 import { cn } from "@/lib/cn";
 
 type Me = { id: string; name: string; role: Role };
-type Act = { type: "confirm"; me: Me } | { type: "set"; display: string; me: Me } | { type: "retire" };
+type Act = { type: "confirm"; me: Me } | { type: "set"; display: string; me: Me; reason: string | null } | { type: "retire" };
 
 function reduce(state: FactSummary | null, a: Act): FactSummary | null {
   if (a.type === "retire") return null;
   if (a.type === "set") {
-    return { id: "pending", display: a.display, level: "declared", setByName: a.me.name, setByRole: a.me.role, setAt: new Date(), confirmations: [] };
+    return { id: "pending", display: a.display, level: "declared", setByName: a.me.name, setByRole: a.me.role, setAt: new Date(), confirmations: [], replaceReason: a.reason };
   }
   if (!state) return state;
   const confirmations = [...state.confirmations, { name: a.me.name, role: a.me.role }];
-  // One agreeing account in a different role lifts a declared value to confirmed.
+  // One agreeing account in a different role lifts a stated value to agreed.
   const level = state.level === "declared" && a.me.role !== state.setByRole ? "confirmed" : state.level;
   return { ...state, confirmations, level };
 }
@@ -28,11 +30,16 @@ const btn = "inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-captio
 /** One verified fact: its value and place on the ladder, the values the documents give, and one-tap actions that update at once. */
 export function FactRow({ caseCode, row, me }: { caseCode: string; row: VerifiedRowData; me: Me }) {
   const [fact, run, pending] = useOptimisticAction<FactSummary | null, Act>(row.fact, reduce);
+  const [asking, setAsking] = useState<string | null>(null);
 
-  const tap = (g: RowGroup) => {
+  const tap = (g: RowGroup, reason?: string) => {
     const a = g.action.kind;
     if (a === "none") return;
-    run(a === "confirm" ? { type: "confirm", me } : { type: "set", display: g.display, me }, () => confirmFact(caseCode, { factKey: row.factKey, scope: row.scope, display: g.display }));
+    if (a === "replace" && reason === undefined) return setAsking(g.display);
+    setAsking(null);
+    run(a === "confirm" ? { type: "confirm", me } : { type: "set", display: g.display, me, reason: reason ?? null }, () =>
+      confirmFact(caseCode, { factKey: row.factKey, scope: row.scope, display: g.display, reason }),
+    );
   };
 
   return (
@@ -50,9 +57,10 @@ export function FactRow({ caseCode, row, me }: { caseCode: string; row: Verified
                 Put forward by {fact.setByName} ({ROLE_INFO[fact.setByRole].label})
                 {fact.confirmations.length ? ` · agreed by ${fact.confirmations.map((c) => `${c.name} (${ROLE_INFO[c.role].label})`).join(", ")}` : " · nobody else has agreed yet"}
               </p>
+              {fact.replaceReason ? <p className="text-caption text-steel">Replaced an earlier value: “{fact.replaceReason}”</p> : null}
             </>
           ) : (
-            <p className="text-body-sm text-steel">Not verified yet. Confirm one of the values below to start.</p>
+            <p className="text-body-sm text-steel">No value put forward yet. Put one of the values below forward to start.</p>
           )}
         </div>
         {fact && row.canWithdraw && fact.id !== "pending" ? (
@@ -89,11 +97,12 @@ export function FactRow({ caseCode, row, me }: { caseCode: string; row: Verified
                 {g.action.kind !== "none" && !(fact && matches && g.action.kind !== "confirm") ? (
                   <button type="button" disabled={pending} onClick={() => tap(g)} className={cn(btn, "text-link-blue")} title="Agree, or put this value forward">
                     <ShieldCheck size={14} strokeWidth={1.8} aria-hidden="true" />
-                    {g.action.kind === "confirm" ? "Confirm" : g.action.kind === "replace" ? "Use this instead" : "Confirm this value"}
+                    {g.action.kind === "confirm" ? "I agree" : g.action.kind === "replace" ? "Use this instead" : "Put this value forward"}
                   </button>
                 ) : g.action.kind === "none" && g.action.reason ? (
                   <span className="text-caption text-stone">{g.action.reason}</span>
                 ) : null}
+                {asking === g.display ? <ReplaceReason id={`reason-${row.id}`} onCancel={() => setAsking(null)} onSubmit={(reason) => tap(g, reason)} /> : null}
               </li>
             );
           })}

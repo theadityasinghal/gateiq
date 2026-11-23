@@ -9,7 +9,11 @@ export type SourceRef = {
   /** Short label for the UI: "SB 1234567", "F13 BOM123", "Case". */
   label: string;
   role: Role;
+  /** The account that added it (the case owner for the case record). */
+  adderId: string;
   adderName: string;
+  /** Facts this document carries under a verified government signature (the e-invoice QR). */
+  signedFacts?: FactKey[];
 };
 
 export type FactKey =
@@ -62,6 +66,8 @@ export type ValueGroup = {
   sources: SourceRef[];
   /** Set when the fact has a verified value: whether this group equals it. */
   matchesVerified?: boolean;
+  /** A document gives this value under a verified government signature. */
+  signed?: boolean;
 };
 
 /** The verified value a result was compared with. */
@@ -79,9 +85,11 @@ export type CheckResult = {
   groups: ValueGroup[];
   /** Roles that can fix it: whoever added the documents involved. Empty when nothing to fix. */
   owners: Role[];
+  /** Accounts whose papers are behind the problem. Their own explanation is labelled as such. Empty when nothing to fix. */
+  implicated: string[];
   /** Identifies the exact disagreement; an acknowledgement only holds while this stays the same. */
   valuesKey: string;
-  acknowledged?: { note: string; byName: string; at: Date } | null;
+  acknowledged?: { note: string; byName: string; at: Date; self: boolean } | null;
   /** The verified value this fact was compared with, if there is one. */
   verified?: VerifiedMarker;
 };
@@ -91,9 +99,10 @@ export type ContainerReport = { id: string; label: string; checkDigitOk: boolean
 export type CheckReport = {
   containers: ContainerReport[];
   caseChecks: CheckResult[];
-  counts: { mismatch: number; warning: number; invalid: number; acknowledged: number };
+  /** Open issues by kind, plus facts only one paper states ("single"): not wrong, but nothing backs them up. */
+  counts: { mismatch: number; warning: number; invalid: number; acknowledged: number; single: number };
   /** Open issues per submission id, for the chips on document cards. */
   bySubmission: Record<string, number>;
 };
 
-export type CheckAck = { checkKey: string; valuesKey: string; note: string; byName: string; at: Date };
+export type CheckAck = { checkKey: string; valuesKey: string; note: string; byName: string; at: Date; self: boolean };

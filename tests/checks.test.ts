@@ -10,12 +10,13 @@ const caseRecord = {
   consigneeName: "Gulf Traders LLC",
   lines: [{ hsCode: "39011010", packages: 40, grossWeight: 12500, weightUnit: "KGS" }],
 };
-const owner = { role: "consignor" as const, name: "Asha" };
+const owner = { id: "u-asha", role: "consignor" as const, name: "Asha" };
 
 const sb = (containerNo: string): CheckSubmission => ({
   id: "sb1",
   type: "shipping_bill",
   addedByRole: "cha",
+  addedBy: "u-ravi",
   adderName: "Ravi",
   documentNumber: "1234567",
   normalized: {
@@ -35,6 +36,7 @@ const form13: CheckSubmission = {
   id: "f13",
   type: "form_13",
   addedByRole: "transporter",
+  addedBy: "u-kiran",
   adderName: "Kiran",
   documentNumber: "BOM123",
   normalized: {
@@ -56,6 +58,7 @@ const eseal: CheckSubmission = {
   id: "seal",
   type: "e_seal",
   addedByRole: "consignor",
+  addedBy: "u-asha",
   adderName: "Asha",
   documentNumber: "ABCD12345678",
   normalized: {
@@ -74,6 +77,7 @@ const ewb = (vehicle: string | null, validUntil: string | null): CheckSubmission
   id: "ewb",
   type: "eway_bill",
   addedByRole: "consignor",
+  addedBy: "u-asha",
   adderName: "Asha",
   documentNumber: "123412341234",
   normalized: {
@@ -93,6 +97,7 @@ const lr = (vehicle: string, chargedWeightT = 12.5): CheckSubmission => ({
   id: "lr",
   type: "lorry_receipt",
   addedByRole: "transporter",
+  addedBy: "u-kiran",
   adderName: "Kiran",
   documentNumber: "LR1",
   normalized: {
@@ -112,6 +117,7 @@ const vgm = (vgmKg: number, tareKg: number | null): CheckSubmission => ({
   id: "vgm",
   type: "vgm_declaration",
   addedByRole: "consignor",
+  addedBy: "u-asha",
   adderName: "Asha",
   documentNumber: "WS1",
   normalized: {
@@ -133,7 +139,7 @@ describe("cross-document checks", () => {
   it("all agree on a clean case", () => {
     const r = runChecks({ caseRecord, caseOwner: owner, submissions: [sb(GOOD), form13, eseal, ewb("MH04AB1234", "2026-11-12"), lr("MH04AB1234"), vgm(14700, 2200)], today: "2026-11-09" });
     expect(r.containers).toHaveLength(1);
-    expect(r.counts).toEqual({ mismatch: 0, warning: 0, invalid: 0, acknowledged: 0 });
+    expect(r.counts).toMatchObject({ mismatch: 0, warning: 0, invalid: 0, acknowledged: 0 });
     expect(find(r, "container.number")[0].status).toBe("agree");
     expect(find(r, "container.sizeType")[0].status).toBe("agree"); // 22G1 and legacy 2210 are the same box
     expect(find(r, "derived.vgmVsGross")[0].status).toBe("agree");
@@ -157,7 +163,7 @@ describe("cross-document checks", () => {
   });
 
   it("joins a typo even without a shared seal, but keeps two valid neighbouring numbers apart", () => {
-    const src = (id: string): SourceRef => ({ submissionId: id, docType: "packing_list", label: id, role: "consignor", adderName: "A" });
+    const src = (id: string): SourceRef => ({ submissionId: id, docType: "packing_list", label: id, role: "consignor", adderId: "u-a", adderName: "A" });
     const m = (id: string, n: string): ContainerMention => ({ number: n, eSeal: null, source: src(id), claims: [] });
     expect(linkContainers([m("a", GOOD), m("b", TYPO)])).toHaveLength(1);
     expect(linkContainers([m("a", "CSQU3054383"), m("b", "MSKU9998019")])).toHaveLength(2);
@@ -193,7 +199,7 @@ describe("cross-document checks", () => {
     const subs = [sb(GOOD), ewb("MH04AB1234", "2026-11-12"), lr("MH04XY9999")];
     const first = runChecks({ caseRecord, caseOwner: owner, submissions: subs, today: "2026-11-09" });
     const v = find(first, "vehicle.number")[0];
-    const ack = { checkKey: v.key, valuesKey: v.valuesKey, note: "Truck swapped at Bhiwandi", byName: "Kiran", at: new Date() };
+    const ack = { checkKey: v.key, valuesKey: v.valuesKey, note: "Truck swapped at Bhiwandi", byName: "Kiran", at: new Date(), self: false };
     const acked = runChecks({ caseRecord, caseOwner: owner, submissions: subs, acks: [ack], today: "2026-11-09" });
     expect(find(acked, "vehicle.number")[0].acknowledged?.note).toBe("Truck swapped at Bhiwandi");
     expect(acked.counts.mismatch).toBe(first.counts.mismatch - 1);
@@ -206,6 +212,7 @@ describe("cross-document checks", () => {
       id: "inv",
       type: "commercial_invoice",
       addedByRole: "consignor",
+      addedBy: "u-asha",
       adderName: "Asha",
       documentNumber: "INV-26-001",
       normalized: {
@@ -226,7 +233,7 @@ describe("cross-document checks", () => {
   });
 
   it("does not merge two containers from the same document even if one has a typo of the other", () => {
-    const src: SourceRef = { submissionId: "doc-1", docType: "packing_list", label: "PL1", role: "consignor", adderName: "Asha" };
+    const src: SourceRef = { submissionId: "doc-1", docType: "packing_list", label: "PL1", role: "consignor", adderId: "u-asha", adderName: "Asha" };
     const m1: ContainerMention = { number: GOOD, eSeal: null, source: src, claims: [] };
     const m2: ContainerMention = { number: TYPO, eSeal: null, source: src, claims: [] };
     // Mentions from the same document should stay as 2 separate containers

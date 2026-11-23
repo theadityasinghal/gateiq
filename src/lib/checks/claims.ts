@@ -16,7 +16,10 @@ export type CheckSubmission = {
   id: string;
   type: DocType;
   addedByRole: Role;
+  addedBy: string;
   adderName: string;
+  /** Facts the document's signed e-invoice QR vouches for (see lib/qr/signed). */
+  signedFacts?: FactKey[];
   documentNumber: string | null;
   normalized: unknown;
 };
@@ -56,7 +59,9 @@ export function sourceOf(s: CheckSubmission): SourceRef {
     docType: s.type,
     label: `${DOC_TYPES[s.type].short}${s.documentNumber ? ` ${s.documentNumber}` : ""}`,
     role: s.addedByRole,
+    adderId: s.addedBy,
     adderName: s.adderName,
+    ...(s.signedFacts?.length ? { signedFacts: s.signedFacts } : {}),
   };
 }
 

@@ -4,7 +4,8 @@
  *
  * - GST e-invoice: the signed QR is a JWT issued by the IRP. Its payload carries `data`, a JSON string with
  *   SellerGstin, BuyerGstin, DocNo, DocTyp, DocDt (dd/mm/yyyy), TotInvVal, ItemCnt, MainHsnCode, Irn, IrnDt.
- *   The signature is not verified here (that needs the IRP's public key); the UI says so.
+ *   The signature is not verified here: this runs in the browser too. The server checks it against the IRPs'
+ *   public keys when the document is read (src/server/einvoice/verify.ts), and only then do values count as signed.
  * - E-way bill: the printout's QR carries the EWB number, the generator's GSTIN and the generation date.
  *   Its exact layout isn't published, so it is read defensively by pattern.
  */

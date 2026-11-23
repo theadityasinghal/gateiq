@@ -87,6 +87,8 @@ export type FactView = {
   /** Submission ids that said this value when it was put forward. */
   evidence: string[];
   confirmations: FactConfirmation[];
+  /** Why this value replaced an earlier one; absent for a first value. */
+  replaceReason?: string | null;
 };
 
 /** The level a fact has earned: a stored higher level wins; otherwise one agreeing account in another role makes it confirmed. */
@@ -107,11 +109,15 @@ export function canConfirm(viewer: { id: string; role: Role }, fact: Pick<FactVi
   return { ok: true };
 }
 
+/**
+ * What each rung is called on screen. The words stay modest on purpose: "Agreed" means two parties agree, which
+ * catches honest slips but is not proof. Only a signature, an official system or the gate can show a value is true.
+ */
 export const FACT_LEVEL_LABEL: Record<FactLevel, string> = {
-  declared: "Declared",
-  confirmed: "Confirmed",
-  source_verified: "Source-verified",
-  observed: "Observed",
+  declared: "Stated",
+  confirmed: "Agreed",
+  source_verified: "Signed / matches source",
+  observed: "Seen at gate",
 };
 
 /** The ladder in order, for the legend. */
@@ -119,8 +125,8 @@ export const FACT_LEVELS: FactLevel[] = ["declared", "confirmed", "source_verifi
 
 export const FACT_LEVEL_HELP: Record<FactLevel, string> = {
   declared: "Someone put this value forward. Nobody else has agreed yet.",
-  confirmed: "Someone in a different role agrees with it.",
-  source_verified: "Matched against an official source. Not live yet.",
+  confirmed: "Someone in a different role agrees with it. That is agreement, not proof.",
+  source_verified: "Carries a valid government signature (the e-invoice QR), or matches an official system.",
   observed: "Seen at the gate or on the weighbridge. Not live yet.",
 };
 

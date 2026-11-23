@@ -52,6 +52,7 @@ export async function loadFacts(caseIds: string[]): Promise<Map<string, FactView
       setAt: f.createdAt,
       evidence: f.evidence,
       confirmations,
+      replaceReason: f.replaceReason,
     };
     out.set(f.caseId, [...(out.get(f.caseId) ?? []), view]);
   }
@@ -64,7 +65,7 @@ export async function listCaseFacts(caseId: string): Promise<FactView[]> {
 
 /** When a case is created, what the consignor declared (port, HS codes, packages, weight) becomes their declared facts. */
 export async function declareCaseRecordFacts(tx: Tx, input: { caseId: string; caseCode: string; owner: { id: string; role: Role }; record: CheckCase }) {
-  const claims = caseRecordClaims(input.record, { submissionId: null, docType: "case", label: "Case", role: input.owner.role, adderName: "" });
+  const claims = caseRecordClaims(input.record, { submissionId: null, docType: "case", label: "Case", role: input.owner.role, adderId: input.owner.id, adderName: "" });
   const rows = claims.filter((c) => isVerifiable(c.fact));
   if (!rows.length) return;
   await tx.insert(caseFact).values(

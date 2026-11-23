@@ -32,6 +32,15 @@ async function fitImage(file: File): Promise<File> {
   return file;
 }
 
+/** What the QR signature check found, for the tooltip and the note above the form. */
+const QR_SIGNATURE_TEXT = {
+  verified: "the government signature checked out",
+  failed: "its signature did not check out",
+  unchecked: "its signature isn't checked yet",
+  malformed: "its signature couldn't be read",
+  none: "it carries no signature",
+} as const;
+
 /**
  * Two ways to add a structured document: read it from a photo or PDF (QR code first, then the vision
  * model) and confirm the pre-filled form, or type it in. Either way the same form is what gets saved.
@@ -93,7 +102,7 @@ export function DocEntry({
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <h2 className="text-h5">Check what was read</h2>
             {r.usedQr ? (
-              <span className="inline-flex items-center gap-1 text-[14px] font-semibold text-tag-sky-fg" title={`${fromQr} fields from the QR code (exact; its signature isn't verified)${Object.keys(r.qrExtras).length ? `. Also in it: ${Object.entries(r.qrExtras).map(([k, v]) => `${k} ${v}`).join(", ")}` : ""}`}>
+              <span className="inline-flex items-center gap-1 text-[14px] font-semibold text-tag-sky-fg" title={`${fromQr} fields from the QR code (exact; ${QR_SIGNATURE_TEXT[r.qrSignature ?? "none"]})${Object.keys(r.qrExtras).length ? `. Also in it: ${Object.entries(r.qrExtras).map(([k, v]) => `${k} ${v}`).join(", ")}` : ""}`}>
                 <QrCode size={16} strokeWidth={1.8} aria-label="From the QR code" role="img" />
                 {fromQr}
               </span>
@@ -112,6 +121,16 @@ export function DocEntry({
             ) : null}
           </div>
           <p className="mt-1 text-body-sm text-slate">Nothing is saved until you confirm the form below.</p>
+          {r.qrSignature === "verified" ? (
+            <p className="mt-3 rounded-md bg-surface p-3 text-body-sm text-slate">
+              The e-invoice QR carries a valid government signature, so its invoice number, date and seller GSTIN will show as signed. If you change any of
+              those fields, that field no longer counts as signed.
+            </p>
+          ) : r.qrSignature === "failed" ? (
+            <p role="alert" className="mt-3 rounded-md bg-tint-peach p-3 text-body-sm text-tag-orange-fg">
+              The e-invoice QR&apos;s signature did not check out. Compare the values with the paper carefully.
+            </p>
+          ) : null}
           {r.warning ? <p role="alert" className="mt-3 rounded-md bg-tint-peach p-3 text-body-sm text-tag-orange-fg">{r.warning}</p> : null}
           {preview ? (
             preview.isPdf ? (

@@ -8,6 +8,7 @@ import { offerFromReading } from "@/lib/extract/postprocess";
 import { EXTRACTION_PROMPT_VERSION } from "@/lib/extract/schema";
 import { currentDateIst } from "@/lib/format";
 import { parseQr, qrAppliesTo } from "@/lib/qr/parse";
+import { verifyIrpJwt, type SignatureStatus } from "@/server/einvoice/verify";
 import { requireOnboardedUser } from "@/server/session";
 import { audit } from "@/server/audit";
 import { removeObjects, uploadCaseDocument } from "@/server/storage";
@@ -27,6 +28,8 @@ export type ExtractState = {
     fileName: string;
     usedModel: boolean;
     usedQr: boolean;
+    /** For an e-invoice QR: whether its government signature checked out. */
+    qrSignature: SignatureStatus | null;
   };
 };
 
@@ -48,6 +51,8 @@ export async function extractDocument(caseCode: string, type: DocType, _prev: Ex
   const qrText = String(formData.get("qrText") ?? "").slice(0, 8000) || null;
   const qr = qrText ? parseQr(qrText) : null;
   const qrUseful = !!qr && qrAppliesTo(qr, type);
+  // A signed e-invoice QR: check the IRP's signature here, on the server, so it can't be claimed from the browser.
+  const qrSignature: SignatureStatus | null = qrUseful && qr!.kind === "e_invoice" ? verifyIrpJwt(qrText!).status : null;
 
   if (!geminiConfigured() && !qrUseful) {
     return { error: "Reading from photos isn't switched on here (no Gemini API key), and no usable QR code was found. Type the details in instead." };
@@ -88,6 +93,8 @@ export async function extractDocument(caseCode: string, type: DocType, _prev: Ex
         sizeBytes: upload.size,
         sha256: upload.sha256,
         qrText,
+        qrSignature,
+        qrSignedValues: qrSignature === "verified" ? qr!.values : null,
         model: reading?.ok ? reading.model : null,
         promptVersion: EXTRACTION_PROMPT_VERSION,
         output,
@@ -99,7 +106,7 @@ export async function extractDocument(caseCode: string, type: DocType, _prev: Ex
       action: "case.document_read",
       entityType: "case",
       entityId: c.id,
-      details: { caseCode: c.caseCode, type, extractionId: row.id, model: reading?.ok ? reading.model : null, qr: qr?.kind ?? null, fileSha256: upload.sha256 },
+      details: { caseCode: c.caseCode, type, extractionId: row.id, model: reading?.ok ? reading.model : null, qr: qr?.kind ?? null, qrSignature, fileSha256: upload.sha256 },
     });
     return {
       result: {
@@ -111,6 +118,7 @@ export async function extractDocument(caseCode: string, type: DocType, _prev: Ex
         fileName: file.name,
         usedModel: !!reading?.ok,
         usedQr: qrUseful,
+        qrSignature,
       },
     };
   } catch (e) {

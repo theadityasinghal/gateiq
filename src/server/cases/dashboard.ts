@@ -1,5 +1,6 @@
 import "server-only";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { signedFactsOf } from "@/lib/qr/signed";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import { caseGoodsLine, caseMember, caseSubmission, checkAck, user } from "@/db/schema";
@@ -31,16 +32,18 @@ export async function loadDashboardCases(viewer: { role: Role }, cases: CaseRow[
         id: caseSubmission.id,
         caseId: caseSubmission.caseId,
         type: caseSubmission.type,
+        addedBy: caseSubmission.addedBy,
         addedByRole: caseSubmission.addedByRole,
         documentNumber: caseSubmission.documentNumber,
         normalized: caseSubmission.normalized,
         adderName: adder.name,
+        signed: sql<unknown>`${caseSubmission.raw}->'signed'`,
       })
       .from(caseSubmission)
       .innerJoin(adder, eq(adder.id, caseSubmission.addedBy))
       .where(and(inArray(caseSubmission.caseId, ids), isNull(caseSubmission.removedAt))),
     db
-      .select({ caseId: checkAck.caseId, checkKey: checkAck.checkKey, valuesKey: checkAck.valuesKey, note: checkAck.note, byName: user.name, at: checkAck.createdAt })
+      .select({ caseId: checkAck.caseId, checkKey: checkAck.checkKey, valuesKey: checkAck.valuesKey, note: checkAck.note, byName: user.name, at: checkAck.createdAt, self: checkAck.self })
       .from(checkAck)
       .innerJoin(user, eq(user.id, checkAck.userId))
       .where(inArray(checkAck.caseId, ids)),
@@ -52,10 +55,11 @@ export async function loadDashboardCases(viewer: { role: Role }, cases: CaseRow[
   const ownerName = new Map(owners.map((o) => [o.id, o.name]));
   const out: Record<string, DashboardCase> = {};
   for (const c of cases) {
-    const submissions = subs.filter((s) => s.caseId === c.id && isDocType(s.type)).map((s) => ({ ...s, type: s.type as DocType, addedByRole: s.addedByRole as Role }));
+    const submissions = subs.filter((s) => s.caseId === c.id && isDocType(s.type)).map((s) => ({ ...s, type: s.type as DocType, addedByRole: s.addedByRole as Role, signedFacts: signedFactsOf({ signed: s.signed }) }));
     const report = computeCheckReport({
       case: { exportPortCode: c.exportPortCode, consigneeName: c.consigneeName, lines: lines.filter((l) => l.caseId === c.id) },
       consigneeParty: c.consigneeParty,
+      ownerId: c.ownerId,
       ownerName: ownerName.get(c.ownerId) ?? "Consignor",
       submissions,
       acks: acks.filter((a) => a.caseId === c.id),

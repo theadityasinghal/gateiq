@@ -4,12 +4,13 @@ import { FACT_AUTHORITY, FACT_KEYS, canConfirm, canDeclare, effectiveLevel, type
 
 const GOOD = "CSQU3054383";
 const caseRecord = { exportPortCode: "INNSA1", consigneeName: "Gulf Traders LLC", lines: [{ hsCode: "39011010", packages: 40, grossWeight: 12500, weightUnit: "KGS" }] };
-const owner = { role: "consignor" as const, name: "Asha" };
+const owner = { id: "u-asha", role: "consignor" as const, name: "Asha" };
 
 const sb = (number: string): CheckSubmission => ({
   id: `sb-${number}`,
   type: "shipping_bill",
   addedByRole: "cha",
+  addedBy: "u-ravi",
   adderName: "Ravi",
   documentNumber: number,
   normalized: {
@@ -29,6 +30,7 @@ const eseal = (sbNumber: string): CheckSubmission => ({
   id: `seal-${sbNumber}`,
   type: "e_seal",
   addedByRole: "consignor",
+  addedBy: "u-asha",
   adderName: "Asha",
   documentNumber: "ABCD12345678",
   normalized: { documentNumber: "ABCD12345678", documentDate: "2026-11-02", eSealNo: "ABCD12345678", containerNumber: GOOD, sbNumber, sbDate: "2026-11-01", iec: "ABCDE1234F", truckNumber: "MH04AB1234" },

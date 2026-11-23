@@ -17,13 +17,14 @@ import { loadCasePage } from "./page-data";
 const listRoles = (roles: readonly Role[]) => roles.map((r) => ROLE_INFO[r].label).join(" or ");
 
 /**
- * One tap on "Confirm this value". The value comes from the case itself (a document or the case record), never
+ * One tap on "I agree", "Put this value forward" or "Use this instead". The value comes from the case itself (a document or the case record), never
  * from the browser: the action finds the group with this display in the checks and takes its value and the
  * documents behind it as evidence.
  *   - It matches the verified value: adds the viewer's confirmation (a different account in a different role).
  *   - There is no verified value, or it differs: puts this one forward, if the viewer's account type may set it.
+ *     Replacing a value someone already put forward needs a short reason, kept with the new value and in the log.
  */
-export async function confirmFact(caseCode: string, input: { factKey: string; scope: string; display: string }): Promise<ActionResult> {
+export async function confirmFact(caseCode: string, input: { factKey: string; scope: string; display: string; reason?: string }): Promise<ActionResult> {
   const me = await requireOnboardedUser();
   const c = await getCaseForUser(caseCode, me.id);
   if (!c) return fail("You don't have access to this case.");
@@ -71,13 +72,22 @@ export async function confirmFact(caseCode: string, input: { factKey: string; sc
       failure = `Only a ${listRoles(FACT_AUTHORITY[key])} can set the ${inlineLabel(FACTS[key].label)}. Ask them to put this value forward${current ? " or correct their document" : ""}.`;
       return;
     }
+    const reason = String(input.reason ?? "").trim();
+    if (current && reason.length < 5) {
+      failure = "Say briefly why you are replacing this value (at least a few words).";
+      return;
+    }
+    if (reason.length > 300) {
+      failure = "Keep the reason under 300 characters.";
+      return;
+    }
     if (current) await tx.update(caseFact).set({ supersededAt: new Date() }).where(eq(caseFact.id, current.id));
     const [row] = await tx
       .insert(caseFact)
-      .values({ caseId: c.id, factKey: key, scope: input.scope, value: group.value!, display: input.display, setBy: me.id, setByRole: me.role, evidence })
+      .values({ caseId: c.id, factKey: key, scope: input.scope, value: group.value!, display: input.display, setBy: me.id, setByRole: me.role, evidence, replaceReason: current ? reason : null })
       .returning({ id: caseFact.id });
     if (current) await tx.update(caseFact).set({ supersededBy: row.id }).where(eq(caseFact.id, current.id));
-    await audit({ actorId: me.id, action: current ? "fact.replaced" : "fact.declared", entityType: "case", entityId: c.id, details: { ...details, from: current?.display ?? null } }, tx);
+    await audit({ actorId: me.id, action: current ? "fact.replaced" : "fact.declared", entityType: "case", entityId: c.id, details: { ...details, from: current?.display ?? null, ...(current ? { reason } : {}) } }, tx);
   });
   if (failure) return fail(failure);
   revalidatePath(`/cases/${c.caseCode}`, "layout");

@@ -15,6 +15,9 @@ import { fileOrNull, parsePayload } from "./form-helpers";
 import { DOC_HANDLERS } from "./doc-handlers";
 import { SupersededError, fileProblem, refreshCaseStatus, storeSubmission } from "./submission-store";
 import { getCaseForUser } from "./service";
+import { loadCasePage } from "./page-data";
+import { canAcknowledge } from "@/lib/checks/ack";
+import { signedFields } from "@/lib/qr/signed";
 
 export type SubmissionFormState = {
   error?: string;
@@ -94,6 +97,7 @@ export async function submitDocument(caseCode: string, type: DocType, _prev: Sub
     if (used) return { error: "This reading has already been saved as a document." };
   }
   const offered = (extraction?.offered as { initial?: Record<string, unknown> } | undefined)?.initial ?? {};
+  const signed = extraction?.qrSignature === "verified" ? signedFields(extraction.qrSignedValues ?? {}, out.form) : null;
 
   const failed = await trySave({
     caseId: c.id,
@@ -104,7 +108,7 @@ export async function submitDocument(caseCode: string, type: DocType, _prev: Sub
     documentNumber: out.normalized.documentNumber,
     documentDate: out.normalized.documentDate,
     raw: extraction
-      ? { enteredAs: "extracted", extractionId: extraction.id, model: extraction.model, qr: !!extraction.qrText, form: out.form, ...changedFields(offered, out.form) }
+      ? { enteredAs: "extracted", extractionId: extraction.id, model: extraction.model, qr: !!extraction.qrText, form: out.form, ...changedFields(offered, out.form), ...(signed ? { signed } : {}) }
       : { enteredAs: "form", form: out.form },
     normalized: out.normalized,
     provenance: out.provenance,
@@ -212,9 +216,16 @@ export async function acknowledgeCheck(caseCode: string, checkKey: string, value
   if (!checkKey || !valuesKey) return fail("Missing check.");
   if (note.length < 5) return fail("Say briefly why this is fine (at least a few words).");
   if (note.length > 500) return fail("Keep the note under 500 characters.");
+  // The check is worked out again here rather than trusted from the page: it must still exist with exactly
+  // these values, and whether the explainer's own papers are behind it is decided on the server.
+  const data = await loadCasePage(c.caseCode, me.id, me.role);
+  const result = data ? [...data.report.containers.flatMap((x) => x.results), ...data.report.caseChecks].find((r) => r.key === checkKey) : undefined;
+  if (!result || result.valuesKey !== valuesKey) return fail("This check has changed since you opened it. Reload and look again.");
+  const can = canAcknowledge(me, result);
+  if (!can.ok) return fail(can.reason);
   await db.transaction(async (tx) => {
-    await tx.insert(checkAck).values({ caseId: c.id, checkKey, valuesKey, note, userId: me.id });
-    await audit({ actorId: me.id, action: "case.check_acknowledged", entityType: "case", entityId: c.id, details: { caseCode: c.caseCode, checkKey, note } }, tx);
+    await tx.insert(checkAck).values({ caseId: c.id, checkKey, valuesKey, note, userId: me.id, self: can.self });
+    await audit({ actorId: me.id, action: "case.check_acknowledged", entityType: "case", entityId: c.id, details: { caseCode: c.caseCode, checkKey, note, self: can.self } }, tx);
   });
   revalidatePath(`/cases/${c.caseCode}`, "layout");
   revalidatePath("/dashboard");

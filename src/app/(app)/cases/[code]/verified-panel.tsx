@@ -6,11 +6,12 @@ import { Card } from "@/components/ui/card";
 import { LEVEL_ICON } from "@/components/fact-level-badge";
 import { FactRow } from "./fact-row";
 
-const LIVE: FactLevel[] = ["declared", "confirmed"];
+const LIVE: FactLevel[] = ["declared", "confirmed", "source_verified"];
 
 /**
  * The base of the case: the values everyone agrees to treat as true. Documents are checked against these first.
- * A value climbs one rung when someone in a different role confirms it; the later rungs aren't live yet.
+ * A value climbs one rung when someone in a different role agrees with it, and to "signed" when a document with a
+ * verified government signature (the e-invoice QR) carries it. Matching official systems and the gate aren't live yet.
  */
 export function VerifiedPanel({ caseCode, sections, me, readOnly }: { caseCode: string; sections: VerifiedSectionData[]; me: { id: string; name: string; role: Role }; readOnly: boolean }) {
   return (
@@ -19,7 +20,7 @@ export function VerifiedPanel({ caseCode, sections, me, readOnly }: { caseCode: 
         <h2 className="mb-1 text-h5">Verified info</h2>
         <p className="text-body-sm text-slate">
           What the case treats as true. Every document is compared with these values first; where nothing is verified yet, documents are compared with each other.
-          Nobody can confirm their own value, and a value only counts as confirmed when someone in a different role agrees.
+          Nobody can agree with their own value, and a value only shows as Agreed when someone in a different role agrees. Agreement catches slips; it is not proof.
           {readOnly ? " Your account type can view this but not change it." : ""}
         </p>
         <ol className="mt-4 grid gap-3 sm:grid-cols-4">

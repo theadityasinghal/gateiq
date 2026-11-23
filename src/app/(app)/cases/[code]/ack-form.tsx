@@ -11,7 +11,7 @@ import { useOptimisticAction } from "@/lib/use-optimistic-action";
  * "This is expected, because…": records a note against one exact disagreement. The note shows at once; if the
  * server refuses it, the form comes back with what was typed and a message says why.
  */
-export function AckForm({ caseCode, checkKey, valuesKey, byName }: { caseCode: string; checkKey: string; valuesKey: string; byName: string }) {
+export function AckForm({ caseCode, checkKey, valuesKey, byName, self }: { caseCode: string; checkKey: string; valuesKey: string; byName: string; self: boolean }) {
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saved, run] = useOptimisticAction<string | null, string>(null, (_s, note) => note);
@@ -20,7 +20,7 @@ export function AckForm({ caseCode, checkKey, valuesKey, byName }: { caseCode: s
   if (saved) {
     return (
       <p className="animate-rise rounded-md bg-surface p-3 text-body-sm text-slate">
-        <span className="font-medium text-charcoal">{byName}:</span> {saved}
+        <span className="font-medium text-charcoal">{byName}{self ? " (one of the people who added these papers)" : ""}:</span> {saved}
       </p>
     );
   }
@@ -43,6 +43,7 @@ export function AckForm({ caseCode, checkKey, valuesKey, byName }: { caseCode: s
         Explain
       </summary>
       <form onSubmit={onSubmit} className="mt-2 space-y-2">
+        {self ? <p className="text-caption text-steel">Some of these papers are yours, so your note will show as explaining your own papers.</p> : null}
         <label htmlFor={id} className="sr-only">Why this is fine</label>
         <Textarea id={id} value={text} onChange={(e) => setText(e.target.value)} maxLength={500} placeholder="e.g. Truck changed at Bhiwandi after a breakdown; Part B updated." />
         {error ? <p role="alert" className="text-caption text-error">{error}</p> : null}

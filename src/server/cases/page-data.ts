@@ -3,7 +3,7 @@ import { cache } from "react";
 import { caseFlow } from "@/lib/case-flow";
 import { expectedDocuments } from "@/lib/documents";
 import type { Role } from "@/lib/roles";
-import { computeCheckReport, listCheckAcks, summarizeReport } from "./checks";
+import { computeCheckReport, listCheckAcks, summarizeReport, withSignedLevels } from "./checks";
 import { loadFacts } from "./facts-data";
 import { consigneeOf, getCaseForUser, listCaseActivity, listCaseMembers, listSubmissions, withAdderOnCase } from "./service";
 
@@ -20,8 +20,8 @@ export const loadCasePage = cache(async (code: string, userId: string, role: Rol
   const submissions = withAdderOnCase(rows, c, members);
   const consignee = consigneeOf(members);
   const owner = c.owner;
-  const facts = factMap.get(c.id) ?? [];
-  const report = computeCheckReport({ case: c, consigneeParty: consignee?.partyName ?? null, ownerName: owner.name, submissions, acks, facts });
+  const report = computeCheckReport({ case: c, consigneeParty: consignee?.partyName ?? null, ownerId: c.ownerId, ownerName: owner.name, submissions, acks, facts: factMap.get(c.id) ?? [] });
+  const facts = withSignedLevels(factMap.get(c.id) ?? [], report);
   const flow = caseFlow({
     role,
     members: members.length,

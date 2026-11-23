@@ -156,10 +156,10 @@ async function buildScenario(s: Ship, forms: Forms, opts: { invoiceQr: boolean; 
       consigneeName: s.consignee.name,
       lines: caseOut.lines.map((l) => ({ hsCode: l.hsCode, packages: l.packages, grossWeight: l.grossWeight, weightUnit: l.weightUnit })),
     },
-    caseOwner: { role: "consignor", name: s.exporter.name },
+    caseOwner: { id: "consignor", role: "consignor", name: s.exporter.name },
     submissions: entries
       .filter((e) => e.normalized)
-      .map((e, i) => ({ id: `${s.id}-${i}`, type: e.type, addedByRole: e.uploader, adderName: ROLE_INFO[e.uploader].label, documentNumber: e.normalized!.documentNumber, normalized: e.normalized })),
+      .map((e, i) => ({ id: `${s.id}-${i}`, type: e.type, addedByRole: e.uploader, addedBy: e.uploader, adderName: ROLE_INFO[e.uploader].label, documentNumber: e.normalized!.documentNumber, normalized: e.normalized })),
     today: day(0),
   });
   return { entries, report, forms, caseOut };

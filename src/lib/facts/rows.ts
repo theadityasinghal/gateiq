@@ -16,6 +16,7 @@ export type FactSummary = {
   setByRole: Role;
   setAt: Date;
   confirmations: Array<{ name: string; role: Role }>;
+  replaceReason: string | null;
 };
 
 export type RowGroup = {
@@ -57,6 +58,7 @@ export const summarizeFact = (f: FactView): FactSummary => ({
   setByRole: f.setBy.role,
   setAt: f.setAt,
   confirmations: f.confirmations.map((c) => ({ name: c.name, role: c.role })),
+  replaceReason: f.replaceReason ?? null,
 });
 
 export function buildVerifiedSections(

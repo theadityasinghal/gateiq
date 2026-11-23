@@ -8,9 +8,9 @@ describe("activity sentences", () => {
     expect(describeEvent("case.submission_removed", { type: "packing_list" })).toMatchObject({ icon: "trash", group: "documents" });
   });
   it("describes facts with their label and value", () => {
-    expect(describeEvent("fact.confirmed", { factKey: "sb.number", display: "1234567" }).text).toBe("confirmed shipping bill number 1234567");
+    expect(describeEvent("fact.confirmed", { factKey: "sb.number", display: "1234567" }).text).toBe("agreed with shipping bill number 1234567");
     expect(describeEvent("fact.replaced", { factKey: "sb.number", display: "7654321", from: "1234567" }).text).toBe("changed shipping bill number from 1234567 to 7654321");
-    expect(describeEvent("fact.confirmed", { factKey: "exporter.iec", display: "ABCDE1234F" }).text).toBe("confirmed exporter IEC ABCDE1234F");
+    expect(describeEvent("fact.confirmed", { factKey: "exporter.iec", display: "ABCDE1234F" }).text).toBe("agreed with exporter IEC ABCDE1234F");
     expect(describeEvent("fact.declared", { seeded: ["port.code", "goods.hsCodes"] }).text).toBe("declared 2 values from the case record");
     expect(describeEvent("fact.declared", { factKey: "container.eSeal", scope: "CSQU3054383", display: "AB1" }).text).toContain("for CSQU3054383");
   });

@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { and, asc, desc, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { signedFactsOf } from "@/lib/qr/signed";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import {
@@ -207,6 +208,7 @@ export async function listSubmissions(c: { id: string }) {
         createdAt: caseSubmission.createdAt,
         adderName: adder.name,
         adderUsername: adder.username,
+        signed: sql<unknown>`${caseSubmission.raw}->'signed'`,
       })
       .from(caseSubmission)
       .innerJoin(adder, eq(adder.id, caseSubmission.addedBy))
@@ -221,6 +223,7 @@ export async function listSubmissions(c: { id: string }) {
             ...r,
             type: r.type as DocType,
             addedByRole: r.addedByRole as Role,
+            signedFacts: signedFactsOf({ signed: r.signed }),
             files: files.filter((f) => f.submissionId === r.id),
           },
         ]

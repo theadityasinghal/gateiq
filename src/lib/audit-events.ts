@@ -55,7 +55,8 @@ export function describeEvent(action: string, details: Record<string, unknown>):
     }
     case "case.check_acknowledged": {
       const note = str(details.note);
-      return { icon: "note", tone: "orange", group: "verified", text: note ? `explained a check: “${note}”` : "explained a check" };
+      const verb = details.self === true ? "explained a check on their own paper" : "explained a check";
+      return { icon: "note", tone: "orange", group: "verified", text: note ? `${verb}: “${note}”` : verb };
     }
     case "fact.declared": {
       const seeded = Array.isArray(details.seeded) ? details.seeded.length : 0;
@@ -65,12 +66,13 @@ export function describeEvent(action: string, details: Record<string, unknown>):
     }
     case "fact.confirmed": {
       const f = factText(details);
-      return { icon: "shield", tone: "green", group: "verified", text: `confirmed ${f.label}${f.display ? ` ${f.display}` : ""}${f.scope ? ` for ${f.scope}` : ""}` };
+      return { icon: "shield", tone: "green", group: "verified", text: `agreed with ${f.label}${f.display ? ` ${f.display}` : ""}${f.scope ? ` for ${f.scope}` : ""}` };
     }
     case "fact.replaced": {
       const f = factText(details);
       const from = str(details.from);
-      return { icon: "swap", tone: "orange", group: "verified", text: `changed ${f.label} ${from ? `from ${from} ` : ""}to ${f.display ?? "a new value"}` };
+      const reason = str(details.reason);
+      return { icon: "swap", tone: "orange", group: "verified", text: `changed ${f.label} ${from ? `from ${from} ` : ""}to ${f.display ?? "a new value"}${reason ? `: “${reason}”` : ""}` };
     }
     case "fact.retired": {
       const f = factText(details);

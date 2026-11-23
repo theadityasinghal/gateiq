@@ -329,6 +329,10 @@ export const documentExtraction = pgTable(
     sha256: text("sha256").notNull(),
     /** The raw QR text decoded in the browser, if any. */
     qrText: text("qr_text"),
+    /** For a signed e-invoice QR: verified, bad_signature, unknown_issuer or malformed. Null when there was none. */
+    qrSignature: text("qr_signature"),
+    /** Form values taken from a QR whose signature verified. A saved field equal to one of these counts as signed. */
+    qrSignedValues: jsonb("qr_signed_values").$type<Record<string, string>>(),
     /** Model id, or null when only the QR code was used. */
     model: text("model"),
     promptVersion: text("prompt_version").notNull(),
@@ -359,6 +363,8 @@ export const checkAck = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id),
+    /** The explainer added one of the papers behind the problem; the explanation is shown as their own. */
+    self: boolean("self").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("check_ack_case_idx").on(t.caseId)],
@@ -393,6 +399,8 @@ export const caseFact = pgTable(
     setByRole: roleEnum("set_by_role").notNull(),
     /** Submission ids that said this value when it was put forward. */
     evidence: jsonb("evidence").$type<string[]>().notNull().default([]),
+    /** Why this value replaced the one before it. Null for a first value. */
+    replaceReason: text("replace_reason"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     supersededAt: timestamp("superseded_at", { withTimezone: true }),
     supersededBy: uuid("superseded_by"),
