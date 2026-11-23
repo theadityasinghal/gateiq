@@ -6,11 +6,11 @@ type Kind = CheckStatus | "explained";
 
 /** One symbol per check outcome, used everywhere a check result is shown. The words live in `title`. */
 export const STATUS: Record<Kind, { Icon: LucideIcon; label: string; color: string }> = {
-  invalid: { Icon: CircleX, label: "Wrong on its own", color: "text-error" },
-  mismatch: { Icon: CircleX, label: "Mismatch", color: "text-error" },
-  warning: { Icon: TriangleExclamationPoint, label: "Worth a look", color: "text-tag-orange-fg" },
-  agree: { Icon: CircleCheck, label: "Agrees", color: "text-tag-green-fg" },
-  single: { Icon: CircleDot, label: "One source so far", color: "text-stone" },
+  invalid: { Icon: CircleX, label: "Needs fixing", color: "text-error" },
+  mismatch: { Icon: CircleX, label: "Needs fixing", color: "text-error" },
+  warning: { Icon: TriangleExclamationPoint, label: "Please check", color: "text-tag-orange-fg" },
+  agree: { Icon: CircleCheck, label: "Matches", color: "text-tag-green-fg" },
+  single: { Icon: CircleDot, label: "Only one document", color: "text-stone" },
   explained: { Icon: MessageSquareText, label: "Explained", color: "text-steel" },
 };
 
@@ -25,7 +25,27 @@ export function StatusCount({ kind, n, className }: { kind: Kind; n: number; cla
   return (
     <span className={cn("inline-flex items-center gap-1 text-[14px] font-semibold tabular-nums", STATUS[kind].color, className)} title={`${n} · ${STATUS[kind].label}`}>
       <StatusIcon kind={kind} size={16} />
-      {n}
+      {n} <span className="font-medium">{STATUS[kind].label.toLowerCase()}</span>
+    </span>
+  );
+}
+
+const TAG_BG: Record<Kind, string> = {
+  invalid: "bg-tag-red-bg text-tag-red-fg",
+  mismatch: "bg-tag-red-bg text-tag-red-fg",
+  warning: "bg-tint-peach text-tag-orange-fg",
+  agree: "bg-tint-mint text-tag-green-fg",
+  single: "bg-tint-gray text-slate",
+  explained: "bg-tint-sky text-tag-sky-fg",
+};
+
+/** The status as an icon plus its words, so nothing depends on knowing what a symbol means. */
+export function StatusTag({ kind, label, className }: { kind: Kind; label?: string; className?: string }) {
+  const { Icon, label: text } = STATUS[kind];
+  return (
+    <span className={cn("inline-flex items-center gap-1 whitespace-nowrap rounded-sm px-2 py-0.5 text-[13px] font-semibold leading-[1.4]", TAG_BG[kind], className)}>
+      <Icon size={13} strokeWidth={2} aria-hidden="true" />
+      {label ?? text}
     </span>
   );
 }
