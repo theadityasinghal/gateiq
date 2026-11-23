@@ -69,6 +69,13 @@ describe("one paper only", () => {
     expect(run([doc], [fact({ evidence: [doc.id] })]).counts.single).toBeGreaterThan(0);
   });
 
+  it("counts two agreeing papers as agreement even when both were the value's evidence", () => {
+    const doc = sb("1234567");
+    const seal = eseal("1234567");
+    const r = sbNumber(run([doc, seal], [fact({ evidence: [doc.id, seal.id] })]));
+    expect(r.status).toBe("agree");
+  });
+
   it("counts a second, independent paper as agreement", () => {
     const doc = sb("1234567");
     const r = sbNumber(run([doc, eseal("1234567")], [fact({ evidence: [doc.id] })]));

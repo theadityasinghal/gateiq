@@ -54,7 +54,8 @@ export async function confirmFact(caseCode: string, input: { factKey: string; sc
       const can = canConfirm(
         { id: me.id, role: me.role },
         {
-          level: "declared",
+          // The page's view of the fact knows whether a signed document has raised it beyond agreement.
+          level: data.facts.find((f) => f.id === current.id)?.level === "source_verified" ? "source_verified" : "declared",
           setBy: { userId: current.setBy, role: current.setByRole as Role },
           confirmations: confirmations.map((x) => ({ userId: x.userId, role: x.role as Role, name: "", at: new Date() })),
         } as Pick<FactView, "level" | "setBy" | "confirmations">,

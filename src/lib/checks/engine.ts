@@ -144,11 +144,11 @@ function compareWithVerified(
   // A value a signed e-invoice carries is more than anyone's word: the verified value climbs to "signed".
   if (v.level !== "observed" && groups.some((g, i) => closeness[i] === 0 && g.claims.some(isSigned))) verified.level = "source_verified";
   if (!bad.length) {
-    // Agreement with yourself proves nothing: if the only papers that match are the ones the value was taken
-    // from (or the case record it was seeded from), nothing independent backs it up yet.
+    // Agreement with yourself proves nothing: if the one paper that matches is the one the value was taken from
+    // (or the case record it was seeded from), nothing else backs it up yet. Two papers that agree do.
     const own = (s: SourceRef) => (s.submissionId ? v.evidence.includes(s.submissionId) : v.evidence.length === 0 && s.adderId === v.setBy.userId);
     const backing = dedupeSources(groups.flatMap((g) => g.claims.map((c) => c.source)));
-    if (verified.level === "declared" && backing.every(own)) {
+    if (verified.level === "declared" && backing.length <= 1 && backing.every(own)) {
       return { ...base, groups: flagged, valuesKey, status: "single", message: "Only the paper this value was taken from says so.", owners: [], implicated: [], verified };
     }
     return { ...base, groups: flagged, valuesKey, status: "agree", message: "Matches the verified value.", owners: [], implicated: [], verified };
