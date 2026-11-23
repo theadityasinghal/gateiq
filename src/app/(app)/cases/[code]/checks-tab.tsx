@@ -157,6 +157,7 @@ function IssueCard({ caseCode, item, viewer, facts }: { caseCode: string; item: 
                   <p className="text-caption text-steel">
                     {g.sources.map((s) => sourceName(s)).filter((v, idx, a) => a.indexOf(v) === idx).join(", ")}
                     {g.signed ? " · signed e-invoice" : ""}
+                    {g.sources.some((s) => s.editedAfterReading) ? " · changed by hand after reading" : ""}
                     {r.verified ? (good ? " · the case's value" : " · does not match") : ""}
                   </p>
                 </div>

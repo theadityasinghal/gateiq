@@ -20,6 +20,7 @@ export type CheckSubmission = {
   adderName: string;
   /** Facts the document's signed e-invoice QR vouches for (see lib/qr/signed). */
   signedFacts?: FactKey[];
+  editedAfterReading?: number;
   documentNumber: string | null;
   normalized: unknown;
 };
@@ -62,6 +63,7 @@ export function sourceOf(s: CheckSubmission): SourceRef {
     adderId: s.addedBy,
     adderName: s.adderName,
     ...(s.signedFacts?.length ? { signedFacts: s.signedFacts } : {}),
+    ...(s.editedAfterReading ? { editedAfterReading: s.editedAfterReading } : {}),
   };
 }
 

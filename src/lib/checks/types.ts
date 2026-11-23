@@ -14,6 +14,8 @@ export type SourceRef = {
   adderName: string;
   /** Facts this document carries under a verified government signature (the e-invoice QR). */
   signedFacts?: FactKey[];
+  /** Fields the adder changed after Gemini read the file (0 or absent when typed in, or saved as read). */
+  editedAfterReading?: number;
 };
 
 export type FactKey =

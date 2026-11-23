@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { and, asc, desc, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { signedFactsOf } from "@/lib/qr/signed";
+import { readEdits } from "@/lib/raw-vs-tidy";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import {
@@ -210,6 +211,9 @@ export async function listSubmissions(c: { id: string }) {
         adderName: adder.name,
         adderUsername: adder.username,
         signed: sql<unknown>`${caseSubmission.raw}->'signed'`,
+        /** What was typed, and what was changed after reading: for "typed vs compared" and "changed after reading". */
+        form: sql<unknown>`${caseSubmission.raw}->'form'`,
+        readEdits: sql<unknown>`jsonb_build_object('corrected', ${caseSubmission.raw}->'corrected', 'typed', ${caseSubmission.raw}->'typed')`,
       })
       .from(caseSubmission)
       .innerJoin(adder, eq(adder.id, caseSubmission.addedBy))
@@ -225,6 +229,7 @@ export async function listSubmissions(c: { id: string }) {
             type: r.type as DocType,
             addedByRole: r.addedByRole as Role,
             signedFacts: signedFactsOf({ signed: r.signed }),
+            readEdits: readEdits(r.readEdits),
             files: files.filter((f) => f.submissionId === r.id),
           },
         ]

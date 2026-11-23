@@ -1,3 +1,4 @@
+import { tidyDiffs } from "@/lib/raw-vs-tidy";
 import type { CaseForUser, Submission } from "@/server/cases/service";
 import { DOC_TYPES, addableTypes, docTypeSlug } from "@/lib/documents";
 import { ROLE_INFO, type Role } from "@/lib/roles";
@@ -119,6 +120,8 @@ function SubmissionCard({ c, s, viewerId, issues }: { c: CaseForUser; s: Submiss
 
       {s.normalized ? <div className="mt-5"><StructuredDetails s={s} /></div> : null}
 
+      <ReadAndTidy s={s} />
+
       {s.files.length ? (
         <ul className="mt-5 space-y-2 border-t border-hairline-soft pt-4">
           {s.files.map((d) => (
@@ -150,6 +153,55 @@ function SubmissionCard({ c, s, viewerId, issues }: { c: CaseForUser; s: Submiss
         </details>
       ) : null}
     </Card>
+  );
+}
+
+/**
+ * Two things a reader of the paper should know: which fields the adder changed after Gemini read the file, and
+ * where what was typed differs from the tidied value the checks compare (uppercased, converted, standardised).
+ */
+function ReadAndTidy({ s }: { s: Submission }) {
+  const edits = s.readEdits;
+  const diffs = tidyDiffs(s.form, s.normalized, s.provenance);
+  if (!edits.corrected.length && !edits.typed.length && !diffs.length) return null;
+  return (
+    <div className="mt-4 space-y-2 text-caption text-steel">
+      {s.source === "extracted" && edits.corrected.length ? (
+        <p>
+          <span className="font-medium text-charcoal">Changed by hand after reading:</span> {edits.corrected.map((f) => <code key={f} className="mx-0.5 font-mono">{f}</code>)}
+        </p>
+      ) : null}
+      {s.source === "extracted" && edits.typed.length ? (
+        <p>
+          <span className="font-medium text-charcoal">Filled in by hand (not read from the file):</span> {edits.typed.map((f) => <code key={f} className="mx-0.5 font-mono">{f}</code>)}
+        </p>
+      ) : null}
+      {diffs.length ? (
+        <details>
+          <summary className="cursor-pointer list-none">{diffs.length === 1 ? "1 value is" : `${diffs.length} values are`} compared in a tidied form · show</summary>
+          <table className="mt-2 w-full text-left">
+            <thead>
+              <tr>
+                <th className="py-1 pr-3 font-semibold">Field</th>
+                <th className="py-1 pr-3 font-semibold">As typed</th>
+                <th className="py-1 pr-3 font-semibold">Compared as</th>
+                <th className="py-1 font-semibold">Why</th>
+              </tr>
+            </thead>
+            <tbody>
+              {diffs.map((d) => (
+                <tr key={d.field} className="border-t border-hairline-soft">
+                  <td className="py-1 pr-3 font-mono">{d.field}</td>
+                  <td className="py-1 pr-3 font-mono text-charcoal">{d.typed}</td>
+                  <td className="py-1 pr-3 font-mono text-charcoal">{d.compared}</td>
+                  <td className="py-1">{d.how}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
+      ) : null}
+    </div>
   );
 }
 

@@ -31,7 +31,7 @@ export type CheckInput = {
   consigneeParty: string | null;
   ownerId: string;
   ownerName: string;
-  submissions: Array<{ id: string; type: DocType; addedBy: string; addedByRole: Role; adderName: string; documentNumber: string | null; normalized: unknown; signedFacts?: FactKey[] }>;
+  submissions: Array<{ id: string; type: DocType; addedBy: string; addedByRole: Role; adderName: string; documentNumber: string | null; normalized: unknown; signedFacts?: FactKey[]; readEdits?: { corrected: string[] } }>;
   acks: CheckAck[];
   /** Verified values on the case; documents are compared with these first. */
   facts?: FactView[];
@@ -64,6 +64,7 @@ export function computeCheckReport(i: CheckInput): CheckReport {
       addedBy: s.addedBy,
       adderName: s.adderName,
       signedFacts: s.signedFacts,
+      editedAfterReading: s.readEdits?.corrected.length ?? 0,
       documentNumber: s.documentNumber,
       normalized: s.normalized,
     })),
