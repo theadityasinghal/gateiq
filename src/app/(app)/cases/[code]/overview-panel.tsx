@@ -25,7 +25,13 @@ export function OverviewPanel({ c, consignee, flow, uploadFailed, footer }: { c:
           <span><span className="font-medium">Next for you:</span> {flow.next}</span>
         </p>
         {flow.missing.length ? (
-          <p className="mt-1 pl-6 text-caption text-steel">Still expected: {flow.missing.map((n) => n.label.toLowerCase()).join(", ")}.</p>
+          <ul className="mt-2 space-y-1 pl-6 text-caption text-steel">
+            {flow.missing.map((n) => (
+              <li key={n.key}>
+                <span className="font-medium text-charcoal">Still expected: {n.label}.</span> {n.reason}
+              </li>
+            ))}
+          </ul>
         ) : null}
       </Card>
 

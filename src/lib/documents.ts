@@ -1,4 +1,7 @@
 import type { Role } from "@/lib/roles";
+import { applyDocRules, type DocNeed, type RuleCase } from "@/lib/doc-rules";
+
+export type { DocNeed } from "@/lib/doc-rules";
 
 /**
  * Every kind of document a case can carry, and which account types may add it.
@@ -18,6 +21,10 @@ export const DOC_TYPE_KEYS = [
   "temperature_spec",
   "quality_certificate",
   "fumigation_certificate",
+  "phytosanitary_certificate",
+  "health_certificate",
+  "certificate_of_origin",
+  "insurance_certificate",
 ] as const;
 
 export type DocType = (typeof DOC_TYPE_KEYS)[number];
@@ -113,6 +120,34 @@ export const DOC_TYPES: Record<DocType, { label: string; short: string; form: Do
     issuers: ["consignor"],
     blurb: "Fumigation certificate, for perishables and wooden packing.",
   },
+  phytosanitary_certificate: {
+    label: "Phytosanitary certificate",
+    short: "PHYTO",
+    form: "file",
+    issuers: ["consignor", "cha"],
+    blurb: "Plant health certificate, for plant products.",
+  },
+  health_certificate: {
+    label: "Health certificate",
+    short: "HC",
+    form: "file",
+    issuers: ["consignor", "cha"],
+    blurb: "Health or sanitary certificate, for animal products and food.",
+  },
+  certificate_of_origin: {
+    label: "Certificate of origin",
+    short: "COO",
+    form: "file",
+    issuers: ["consignor", "cha"],
+    blurb: "Where the goods were made, for the buyer's customs and trade-agreement duty rates.",
+  },
+  insurance_certificate: {
+    label: "Insurance certificate",
+    short: "INS",
+    form: "file",
+    issuers: ["consignor", "cha"],
+    blurb: "Cargo insurance policy or certificate, when the seller insures (CIF, CIP).",
+  },
 };
 
 /**
@@ -137,26 +172,13 @@ export function addableTypes(role: Role): DocType[] {
   return DOC_TYPE_KEYS.filter((t) => canAddDocument(role, t));
 }
 
-/** One thing a case is expected to have: any one of these document types satisfies it. */
-export type DocNeed = { key: string; label: string; anyOf: readonly DocType[] };
-
 /**
- * What a case should carry before it is ready for the gate: the shipping papers every export needs, plus the
- * certificates its special-cargo flags call for. Container papers (Form-13, VGM, e-seal) are left out: how many
- * there are depends on the containers, which only the shipping bill says.
+ * What a case should carry before it is ready for the gate, from the rules in lib/doc-rules (each with its reason).
+ * Container papers (Form-13, VGM, e-seal) are left out: how many there are depends on the containers, which only
+ * the shipping bill says.
  */
-export function expectedDocuments(c: { hazmat?: unknown; pharma?: unknown; perishable?: unknown }): DocNeed[] {
-  const needs: DocNeed[] = [
-    { key: "shipping_bill", label: DOC_TYPES.shipping_bill.label, anyOf: ["shipping_bill"] },
-    { key: "commercial_invoice", label: DOC_TYPES.commercial_invoice.label, anyOf: ["commercial_invoice"] },
-    { key: "packing_list", label: DOC_TYPES.packing_list.label, anyOf: ["packing_list"] },
-    { key: "eway_bill", label: DOC_TYPES.eway_bill.label, anyOf: ["eway_bill"] },
-    { key: "lorry_receipt", label: DOC_TYPES.lorry_receipt.label, anyOf: ["lorry_receipt"] },
-  ];
-  if (c.hazmat) needs.push({ key: "msds", label: DOC_TYPES.msds.label, anyOf: ["msds"] });
-  if (c.pharma) needs.push({ key: "temperature_spec", label: DOC_TYPES.temperature_spec.label, anyOf: ["temperature_spec"] });
-  if (c.perishable) needs.push({ key: "perishable_certificate", label: "Perishable certificate", anyOf: ["fumigation_certificate", "quality_certificate"] });
-  return needs;
+export function expectedDocuments(c: RuleCase & { lines?: ReadonlyArray<{ hsCode: string }> }): DocNeed[] {
+  return applyDocRules({ ...c, hsCodes: c.hsCodes ?? c.lines?.map((l) => l.hsCode) });
 }
 
 /** The needs no present document satisfies. */

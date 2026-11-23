@@ -41,6 +41,7 @@ const caseRow = {
   hazmat: shipmentCase.hazmat,
   pharma: shipmentCase.pharma,
   perishable: shipmentCase.perishable,
+  incoterm: shipmentCase.incoterm,
   createdAt: shipmentCase.createdAt,
 };
 

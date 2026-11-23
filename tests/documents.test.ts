@@ -16,8 +16,12 @@ const EXPECTED: Partial<Record<Role, DocType[]>> = {
     "temperature_spec",
     "quality_certificate",
     "fumigation_certificate",
+    "phytosanitary_certificate",
+    "health_certificate",
+    "certificate_of_origin",
+    "insurance_certificate",
   ],
-  cha: ["shipping_bill", "form_13", "vgm_declaration", "commercial_invoice", "packing_list"],
+  cha: ["shipping_bill", "form_13", "vgm_declaration", "commercial_invoice", "packing_list", "phytosanitary_certificate", "health_certificate", "certificate_of_origin", "insurance_certificate"],
   transporter: ["eway_bill", "lorry_receipt", "form_13"],
   consignee: ["eway_bill"],
 };
@@ -33,7 +37,7 @@ describe("who can add which document", () => {
 
   it("lists addable types in a stable order", () => {
     expect(addableTypes("transporter")).toEqual(["eway_bill", "lorry_receipt", "form_13"]);
-    expect(addableTypes("cha")).toEqual(["shipping_bill", "form_13", "vgm_declaration", "commercial_invoice", "packing_list"]);
+    expect(addableTypes("cha")).toEqual(["shipping_bill", "form_13", "vgm_declaration", "commercial_invoice", "packing_list", "phytosanitary_certificate", "health_certificate", "certificate_of_origin", "insurance_certificate"]);
   });
 
   it("lets drivers and officials add nothing", () => {

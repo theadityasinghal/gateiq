@@ -1,4 +1,4 @@
-import { BadgeCheck, ClipboardCheck, FileText, FlaskConical, Leaf, Lock, Package, Receipt, ReceiptText, Scale, Ship, Thermometer, Truck, type LucideIcon } from "lucide-react";
+import { BadgeCheck, ClipboardCheck, FileText, FlaskConical, Leaf, Lock, Package, Receipt, ReceiptText, Scale, Ship, Thermometer, Truck, Sprout, HeartPulse, Globe, ShieldCheck, type LucideIcon } from "lucide-react";
 import type { DocType } from "@/lib/documents";
 
 const ICONS: Record<DocType, LucideIcon> = {
@@ -14,6 +14,10 @@ const ICONS: Record<DocType, LucideIcon> = {
   temperature_spec: Thermometer,
   quality_certificate: BadgeCheck,
   fumigation_certificate: Leaf,
+  phytosanitary_certificate: Sprout,
+  health_certificate: HeartPulse,
+  certificate_of_origin: Globe,
+  insurance_certificate: ShieldCheck,
 };
 
 /** A small vector icon for each kind of document, so lists can be scanned by shape as well as by name. */
