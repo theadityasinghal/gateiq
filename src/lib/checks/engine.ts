@@ -417,7 +417,9 @@ export function runChecks(input: {
   const open = all.filter((r) => (r.status === "mismatch" || r.status === "warning" || r.status === "invalid") && !r.acknowledged);
   const bySubmission: Record<string, number> = {};
   for (const r of open) {
-    for (const s of dedupeSources(r.groups.flatMap((g) => g.sources))) if (s.submissionId) bySubmission[s.submissionId] = (bySubmission[s.submissionId] ?? 0) + 1;
+    // Only the papers behind the problem: one that matches the case's value isn't the one to fix.
+    const behind = r.groups.filter((g) => g.matchesVerified !== true).flatMap((g) => g.sources);
+    for (const s of dedupeSources(behind)) if (s.submissionId) bySubmission[s.submissionId] = (bySubmission[s.submissionId] ?? 0) + 1;
   }
   return {
     containers,

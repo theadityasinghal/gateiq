@@ -102,10 +102,10 @@ export type ConfirmCheck = { ok: true } | { ok: false; reason: string };
 /** May this viewer add their confirmation to the fact as it stands? */
 export function canConfirm(viewer: { id: string; role: Role }, fact: Pick<FactView, "level" | "setBy" | "confirmations">): ConfirmCheck {
   if (isReadOnly(viewer.role)) return { ok: false, reason: "Your account type can only view this case." };
-  if (fact.level === "source_verified" || fact.level === "observed") return { ok: false, reason: "Already verified at source." };
-  if (fact.setBy.userId === viewer.id) return { ok: false, reason: "You put this value forward. Someone in another role has to confirm it." };
-  if (fact.confirmations.some((c) => c.userId === viewer.id)) return { ok: false, reason: "You already confirmed this value." };
-  if (fact.setBy.role === viewer.role) return { ok: false, reason: "Someone in a different role has to confirm it." };
+  if (fact.level === "source_verified" || fact.level === "observed") return { ok: false, reason: "A signed document already backs this value." };
+  if (fact.setBy.userId === viewer.id) return { ok: false, reason: "You put this value forward. Someone in another role has to agree with it." };
+  if (fact.confirmations.some((c) => c.userId === viewer.id)) return { ok: false, reason: "You already agreed with this value." };
+  if (fact.setBy.role === viewer.role) return { ok: false, reason: "Someone in a different role has to agree with it." };
   return { ok: true };
 }
 

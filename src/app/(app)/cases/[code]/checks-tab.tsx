@@ -23,8 +23,8 @@ const ownersText = (owners: Role[]) => owners.map((o) => ROLE_INFO[o].label).joi
 function headline(r: CheckResult): string {
   if (!isCompared(r)) return r.message;
   if (r.verified) {
-    if (r.status === "warning") return "Written a little differently from the agreed value. Probably the same.";
-    return "Does not match the agreed value.";
+    if (r.status === "warning") return "Written a little differently from the case's value. Probably the same.";
+    return "Does not match the case's value.";
   }
   if (r.status === "warning") return r.message;
   return "The papers say different things.";

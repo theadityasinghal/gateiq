@@ -106,6 +106,14 @@ describe("who is implicated in a problem", () => {
     expect(r.implicated).toEqual(["u-asha"]);
   });
 
+  it("counts a problem only against the papers behind it, not the ones that match the case's value", () => {
+    const doc = sb("1234567");
+    const seal = eseal("7654321");
+    const r = run([doc, seal], [fact({})]);
+    expect(r.bySubmission[seal.id]).toBe(1);
+    expect(r.bySubmission[doc.id]).toBeUndefined();
+  });
+
   it("names nobody when everything agrees", () => {
     expect(sbNumber(run([sb("1234567"), eseal("1234567")])).implicated).toEqual([]);
   });
