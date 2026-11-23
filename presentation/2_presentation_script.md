@@ -1,65 +1,62 @@
-# GateIQ presentation script (v2)
+# GateIQ presentation script (v3)
 
-Team Eureka | 5 slides | about 3 minutes | **Speaker: Ayush Yadav**
+Team Eureka | 5 slides | about 3 minutes 30 seconds | **Speakers: Kartikeya Jain (slides 1-2), Ayush Yadav (slide 3), Bhanwar Lal (slides 4-5)**
 
-The slides are the bridge between the skit and the live website. They do **not** walk through the workflow: the website does that. File: `3_GateIQ_slides.pptx` (same notes are inside it as speaker notes).
+The slides are the bridge between the skit and the live website. They do **not** walk through the workflow: the website does that. File: `3_GateIQ_slides.pptx` (the same notes are inside it as speaker notes).
 
-Ayush walks on during the skit's final bow with the clicker. Aditya and Kartikeya take over at the end of slide 5.
+Kartikeya walks on with the clicker during the skit's final bow. Aditya, Kartikeya and Meet take over at the end of slide 5.
 
-| # | Slide | Time |
-|---|---|---|
-| 1 | GateIQ: catch the mistake at the desk, not at the gate | 0:10 |
-| 2 | One container, five papers, nobody comparing | 0:35 |
-| 3 | One case per shipment, paper checked against paper | 0:45 |
-| 4 | Reads the papers, checks them, keeps the record | 0:40 |
-| 5 | What comes next, then "Now, live." | 0:25 |
+| # | Slide | Speaker | Time |
+|---|---|---|---|
+| 1 | GateIQ: catch the mistake at the desk, not at the gate | Kartikeya | 0:10 |
+| 2 | One container, five papers, nobody comparing | Kartikeya | 0:40 |
+| 3 | One case per shipment, paper checked against paper | Ayush | 0:50 |
+| 4 | Reads the papers, checks them, keeps the record | Bhanwar | 0:45 |
+| 5 | What comes next, then "Now, live." | Bhanwar | 0:30 |
 
 ---
 
-## Slide 1: GateIQ  (0:10)
+## Slide 1: GateIQ  (Kartikeya, 0:10)
 
-> We are Team Eureka, and this is GateIQ. What you just saw is the problem. Four slides on what we built, and then we will show it to you live.
+> What you just saw is the problem. Four slides on what we built, and then we will show it to you live. We are Team Eureka, and this is GateIQ: catch the mistake at the desk, not at the gate.
 
-## Slide 2: One container, five papers, nobody comparing  (0:35)
+## Slide 2: One container, five papers, nobody comparing  (Kartikeya, 0:40)
 
 *(Point at the red box.)*
 
-> You saw this in the skit: one container number, on five papers. Four of them say 332017 3. The packing list says 332017 6, and that number fails the container check digit.
+> In the skit, one container number sat on five papers. Four of them say the same thing. The packing list has a different last digit, and that number fails the container check digit.
 >
-> Every paper comes from a different person and a different system. Nobody puts them side by side. So the mistake is found at the gate, which is the most expensive place: the truck turns back, the vessel cutoff is missed, and demurrage starts.
+> The papers come from different people and different systems: customs, tax, the terminal, the transporter. Nobody puts them side by side. So the mistake is found at the gate, which is the most expensive place: the truck turns back, the vessel cutoff is missed, the port jams, and detention and demurrage follow.
 
-## Slide 3: One case per shipment, paper checked against paper  (0:45)
+## Slide 3: One case per shipment, paper checked against paper  (Ayush, 0:50)
 
-> GateIQ is one case per shipment. The exporter creates it and invites the others. Each person adds their own papers, and GateIQ compares every fact across all of them.
+> GateIQ is one case per shipment. The exporter creates it and invites the others, down the chain: consignee, customs agent, transporter, then the driver. A gate officer can be invited to view. Each person adds their own papers, and GateIQ compares every fact across all of them. Every flag shows who said what, and who can fix it.
 >
-> The idea we are proudest of: nobody is the single source of truth. Every value carries a label. *Stated* means someone put it forward. *Agreed* means a different person, in a different role, says the same. *Signed* means it comes from a document under a government signature. *Seen at gate* is the next phase. Nobody can raise their own claim.
+> The idea we are proudest of: nobody is the single source of truth. Every value carries a label. *Stated* means someone put it forward. *Agreed* means a different person, in a different role, says the same. That catches slips; it is not proof. Nobody can raise their own claim. *Seen at gate* is the next phase.
 
-*If asked about Signed:* it needs the official government keys for e-invoice signatures, which we do not have yet. Today it honestly shows "not checked".
+## Slide 4: Reads the papers, checks them, keeps the record  (Bhanwar, 0:45)
 
-## Slide 4: Reads the papers, checks them, keeps the record  (0:40)
-
-> Three things. **Read:** QR codes are decoded first. For everything else Gemini reads the page, and we tell it to copy exactly what is printed, so a typo on the paper is read as a typo. A person confirms every field before it is saved.
+> Three things. **Read:** Gemini reads photos and PDFs, and we tell it to copy exactly what is printed, so a typo on the paper is read as a typo. A person confirms every field before it is saved, and can correct it later.
 >
-> **Check:** the container check digit, VGM minus tare against the shipping bill, e-way bill expiry and Part B, the consignee name, HS codes, packages and the truck.
+> **Check:** the container check digit, VGM minus tare against the shipping bill, e-way bill expiry and vehicle, the consignee name, HS codes, packages, weights and the truck.
 >
-> **Remember:** nothing is overwritten. Every entry is kept and hashed, and every action is in the activity log. If someone explains a flag away, that note lapses when the values change.
+> **Remember:** nothing is overwritten. Every entry is kept and hashed, and a correction is a new version. If someone explains a flag away, that note lapses when the values change. Every action is in the activity log.
 
-*(One breath for the stack line, do not linger: Next.js, Supabase in Mumbai, Better Auth, Gemini, Vitest.)*
+*(One breath for the stack line: Next.js, Supabase in Mumbai, Better Auth, Gemini, Vitest.)*
 
-## Slide 5: What comes next, then "Now, live."  (0:25)
+## Slide 5: What comes next, then "Now, live."  (Bhanwar, 0:30)
 
-> Next: connect to ICEGATE and the e-way bill system, build the gate side, and run a pilot at one terminal. Today the gate stage is not live, and the dashboard says so.
+> Next: connect to ICEGATE and the e-way bill system through ULIP. The code already goes through one interface for filings, so that is an addition, not a rewrite. Then the gate side, which the dashboard marks as not live yet. Then a pilot at one terminal with real papers.
 >
-> Now let us show you the whole thing, live. Three accounts on one case: an exporter, a transporter and a gate officer.
+> Now let us show you all of it, live: an exporter, a transporter and a gate officer, on one case.
 
-*(Hand over: Aditya drives the laptop, Kartikeya narrates.)*
+*(Hand over: Aditya, Kartikeya and Meet take the laptop.)*
 
 ---
 
-## What changed from the old presentation script
+## What changed from the previous version
 
-Removed: the six-step workflow and every worked example (container, VGM, e-way bill, IEC/GSTIN). The website shows those live.
-
-Dropped because they are no longer true: "eleven user roles" (people can choose six account types; the gate officer is the only official one), "AWS/S3" (we use Supabase Postgres and Storage, Mumbai, on Vercel), and the old fixed 1-tonne weight cases.
-
-Added: the Stated / Agreed / Signed ladder, "who can fix it", and honest limits (gate not live, no government keys yet).
+- Speakers are now Kartikeya, Ayush and Bhanwar.
+- About 20% more detail on each slide and in the notes (who filed each paper, the invite chain, more of what is checked, how corrections are stored).
+- Removed all QR-code and signed-invoice explanation, including the "Signed" level of the ladder.
+- The old workflow, examples, "eleven roles" and "AWS/S3" claims stay out: they were stale or are shown live on the website.

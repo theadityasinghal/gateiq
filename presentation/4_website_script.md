@@ -1,6 +1,6 @@
 # GateIQ live website script (v1)
 
-Team Eureka | about 8 minutes | **Aditya drives the laptop. Kartikeya narrates** (he talks, Aditya clicks, and they swap lines where marked).
+Team Eureka | about 8 minutes | **Presenters: Aditya, Kartikeya and Meet.** Kartikeya narrates the story and the gate officer view, Aditya drives the exporter side (Documents, Checks, fixes), Meet takes over the transporter part (adding the lorry receipt) so the driver from the skit is on screen. One laptop, passed along.
 
 The demo replays the skit: same case (scenario B, cotton T-shirts, Tiruppur to Chennai to Hamburg), same mistakes. Three accounts only, the essence of the flow: **exporter, transporter, gate officer**. The consignee and the driver are mentioned in one line each.
 
@@ -39,12 +39,12 @@ Nothing here has been done yet. **Creating accounts and cases writes to the real
 | 0:30 | Exporter: dashboard and case Overview | Kartikeya |
 | 1:30 | People & invites | Kartikeya |
 | 2:15 | Documents (7 already added) | Aditya |
-| 3:00 | **Transporter**: add the lorry receipt live | Aditya, Kartikeya reacts |
-| 4:30 | Exporter: Checks tab | Kartikeya |
+| 3:00 | **Transporter**: add the lorry receipt live | Meet, Kartikeya reacts |
+| 4:30 | Exporter: Checks tab | Aditya, Kartikeya narrates |
 | 5:45 | Fix one problem, explain another | Aditya |
 | 6:45 | Verified info | Kartikeya |
 | 7:15 | **Gate officer**: view-only | Kartikeya |
-| 7:50 | Close | Both |
+| 7:50 | Close | All three |
 
 ### 0:00 Landing page  (0:30)
 
@@ -82,15 +82,15 @@ Nothing here has been done yet. **Creating accounts and cases writes to the real
 
 *On screen: switch to the transporter window. Dashboard shows the case. Open it, Documents, "Add a document", Lorry receipt.*
 
-**Aditya:** This is the transporter's dashboard. They accepted the invitation, so the case is on their dashboard. They add the lorry receipt: upload the file.
+**Meet:** This is the transporter's dashboard. They accepted the invitation, so the case is on their dashboard. They add the lorry receipt: upload the file.
 
 *(Upload `B5_lorry-receipt.pdf`. Wait for the reading, about 5 seconds. Fill the silence.)*
 
-**Kartikeya:** While it reads: QR codes are decoded first, right in the browser. This lorry receipt has none, so Gemini reads the page. It is told to copy exactly what is printed, and never to fix anything.
+**Kartikeya:** While it reads: Gemini reads the page. It is told to copy exactly what is printed, and never to fix anything.
 
 *(The form fills in. Point at highlighted low-confidence fields.)*
 
-**Aditya:** The form is pre-filled. Fields it was less sure of are highlighted. A person must confirm every field before saving: LR number, truck TN39BX7712, **580 packages**, charged weight 4,500 kg. *(Save.)*
+**Meet:** The form is pre-filled. Fields it was less sure of are highlighted. A person must confirm every field before saving: LR number, truck TN39BX7712, **580 packages**, charged weight 4,500 kg. *(Save.)*
 
 **Kartikeya:** Notice 580 packages. The shipping bill says 600. Nobody has told the transporter yet.
 
@@ -122,7 +122,7 @@ Nothing here has been done yet. **Creating accounts and cases writes to the real
 
 *On screen: Verified info section.*
 
-**Kartikeya:** Every fact on the case shows how far it can be trusted. Stated: someone put it forward. Agreed: a different person in a different role agrees. Nobody can agree with their own claim. Where only one paper says something, it says "one paper only": nothing contradicts it, but nothing backs it up either. *(Do not show "Signed": it needs government keys we do not have yet.)*
+**Kartikeya:** Every fact on the case shows how far it can be trusted. Stated: someone put it forward. Agreed: a different person in a different role agrees. Nobody can agree with their own claim. Where only one paper says something, it says "one paper only": nothing contradicts it, but nothing backs it up either.
 
 ### 7:15 Gate officer: view-only  (0:35)
 
@@ -133,7 +133,7 @@ Nothing here has been done yet. **Creating accounts and cases writes to the real
 ### 7:50 Close  (0:10)
 
 **Kartikeya:** The same mistakes as the skit, caught at the desk.
-**Aditya:** The gate side is the next phase. Thank you. We are happy to take questions.
+**Meet:** The gate side is the next phase. Thank you. We are happy to take questions.
 
 ---
 
@@ -152,5 +152,4 @@ Nothing here has been done yet. **Creating accounts and cases writes to the real
 - **Is the AI trusted?** No. Gemini only reads. It is told to copy what is printed and never fix anything, and a person confirms every field before it is saved.
 - **Is this connected to ICEGATE?** Not yet. Every filing goes through a `FilingSource` interface, so a real ULIP connection can be added without touching the rest.
 - **Why a view-only gate officer?** The gate phase is not built. Today he can see everything and change nothing.
-- **What about the signed e-invoice QR?** The code checks the signature, but we are waiting for the official government keys, so it shows "not checked".
 - **Why not just OCR everything?** Because the problem is not reading. It is nobody comparing.
