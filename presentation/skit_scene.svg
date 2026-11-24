@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="Helvetica, Arial, sans-serif">
+<defs>
+<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6c9dc"/><stop offset="0.6" stop-color="#ffe3c8"/><stop offset="1" stop-color="#fff3df"/></linearGradient>
+<pattern id="stripe" width="40" height="30" patternUnits="userSpaceOnUse" patternTransform="rotate(0)"><rect width="20" height="30" fill="#e03131"/><rect x="20" width="20" height="30" fill="#ffffff"/></pattern>
+</defs>
+<!-- sky, sun, sea -->
+<rect width="1600" height="560" fill="url(#sky)"/>
+<circle cx="1330" cy="170" r="70" fill="#ffd36b" opacity=".85"/>
+<rect y="400" width="1600" height="170" fill="#9fc9ea"/>
+<rect y="400" width="1600" height="8" fill="#7fb3dd"/>
+<!-- ship -->
+<polygon points="880,470 1500,470 1450,520 930,520" fill="#1a2a52"/>
+<rect x="940" y="440" width="70" height="30" fill="#dd5b00"/><rect x="1010" y="440" width="70" height="30" fill="#2a9d99"/><rect x="1080" y="440" width="70" height="30" fill="#f5d75e"/><rect x="1150" y="440" width="70" height="30" fill="#5645d4"/><rect x="1220" y="440" width="70" height="30" fill="#dd5b00"/>
+<rect x="975" y="410" width="70" height="30" fill="#2a9d99"/><rect x="1045" y="410" width="70" height="30" fill="#e03131"/><rect x="1115" y="410" width="70" height="30" fill="#f5d75e"/><rect x="1185" y="410" width="70" height="30" fill="#2a9d99"/>
+<rect x="1320" y="400" width="80" height="70" fill="#f0eeec"/><rect x="1335" y="380" width="50" height="22" fill="#f0eeec"/>
+<!-- crane -->
+<rect x="1510" y="250" width="18" height="320" fill="#787671"/><rect x="1330" y="250" width="240" height="14" fill="#787671"/><line x1="1370" y1="264" x2="1370" y2="340" stroke="#37352f" stroke-width="3"/><rect x="1350" y="340" width="40" height="22" fill="#dd5b00"/>
+<!-- ground and road -->
+<rect y="560" width="1600" height="340" fill="#b9b5ad"/>
+<rect y="610" width="1600" height="250" fill="#4a4843"/>
+<g stroke="#f5d75e" stroke-width="6" stroke-dasharray="60 40"><line x1="0" y1="735" x2="1600" y2="735"/></g>
+<!-- queue of trucks (background) -->
+<g opacity=".92">
+ <g transform="translate(20,585) scale(.5)"><rect width="320" height="140" fill="#8a8680"/><rect x="330" y="40" width="110" height="100" fill="#6f6c66"/><circle cx="70" cy="145" r="26" fill="#222"/><circle cx="380" cy="145" r="26" fill="#222"/></g>
+ <g transform="translate(270,585) scale(.5)"><rect width="320" height="140" fill="#a9a59d"/><rect x="330" y="40" width="110" height="100" fill="#85817a"/><circle cx="70" cy="145" r="26" fill="#222"/><circle cx="380" cy="145" r="26" fill="#222"/></g>
+</g>
+<text x="60" y="570" font-size="30" font-weight="900" fill="#e03131" transform="rotate(-6 60 570)">POM! POM!</text>
+<text x="330" y="560" font-size="34" font-weight="900" fill="#e03131" transform="rotate(5 330 560)">PEEEEP!</text>
+<!-- booth -->
+<rect x="1190" y="430" width="260" height="290" fill="#e6e0f5"/><polygon points="1170,430 1470,430 1440,395 1200,395" fill="#5645d4"/>
+<rect x="1215" y="465" width="210" height="130" fill="#dcecfa" stroke="#37352f" stroke-width="5"/>
+<rect x="1215" y="595" width="210" height="14" fill="#37352f"/>
+<text x="1320" y="655" text-anchor="middle" font-size="26" font-weight="800" fill="#391c57">GATE ENTRY</text>
+<!-- Sharma ji in booth -->
+<rect x="1290" y="545" width="70" height="50" fill="#a4a097"/>
+<circle cx="1325" cy="520" r="30" fill="#f2c9a0"/>
+<rect x="1297" y="485" width="56" height="16" rx="6" fill="#523410"/><rect x="1292" y="497" width="66" height="6" fill="#523410"/>
+<path d="M1308 535 Q1325 527 1342 535" stroke="#37352f" stroke-width="5" fill="none"/>
+<path d="M1308 508 L1320 513 M1342 508 L1330 513" stroke="#37352f" stroke-width="4"/>
+<circle cx="1314" cy="516" r="3.5" fill="#1a1a1a"/><circle cx="1336" cy="516" r="3.5" fill="#1a1a1a"/>
+<line x1="1295" y1="570" x2="1195" y2="545" stroke="#a4a097" stroke-width="16" stroke-linecap="round"/>
+<!-- papers in Sharma ji's hand -->
+<g transform="rotate(-8 1150 540)"><rect x="1115" y="490" width="68" height="88" fill="#fff" stroke="#37352f" stroke-width="3"/><rect x="1125" y="502" width="48" height="5" fill="#a4a097"/><rect x="1125" y="514" width="48" height="5" fill="#a4a097"/><text x="1149" y="552" text-anchor="middle" font-size="11" font-weight="800" fill="#1a1a1a">...332017</text><text x="1149" y="568" text-anchor="middle" font-size="16" font-weight="900" fill="#1aae39">3</text></g>
+<g transform="rotate(7 1215 548)"><rect x="1180" y="498" width="68" height="88" fill="#fff" stroke="#37352f" stroke-width="3"/><rect x="1190" y="510" width="48" height="5" fill="#a4a097"/><rect x="1190" y="522" width="48" height="5" fill="#a4a097"/><text x="1214" y="560" text-anchor="middle" font-size="11" font-weight="800" fill="#1a1a1a">...332017</text><text x="1214" y="576" text-anchor="middle" font-size="16" font-weight="900" fill="#e03131">6</text></g>
+<!-- STOP sign + barrier -->
+<rect x="1088" y="520" width="12" height="190" fill="#787671"/>
+<polygon points="1068,455 1120,455 1156,491 1156,543 1120,579 1068,579 1032,543 1032,491" transform="translate(-12,-30)" fill="#e03131" stroke="#fff" stroke-width="5"/>
+<text x="1082" y="504" text-anchor="middle" font-size="34" font-weight="900" fill="#fff">STOP</text>
+<rect x="1160" y="640" width="26" height="80" fill="#37352f"/>
+<rect x="1010" y="640" width="160" height="26" fill="url(#stripe)" stroke="#fff" stroke-width="3"/>
+<!-- truck -->
+<g>
+ <rect x="500" y="545" width="340" height="230" rx="6" fill="#2a9d99" stroke="#1d6f6c" stroke-width="5"/>
+ <g stroke="#1d6f6c" stroke-width="5"><line x1="540" y1="550" x2="540" y2="770"/><line x1="580" y1="550" x2="580" y2="770"/><line x1="620" y1="550" x2="620" y2="770"/><line x1="660" y1="550" x2="660" y2="770"/><line x1="700" y1="550" x2="700" y2="770"/><line x1="740" y1="550" x2="740" y2="770"/><line x1="780" y1="550" x2="780" y2="770"/><line x1="820" y1="550" x2="820" y2="770"/></g>
+ <rect x="530" y="610" width="280" height="80" rx="8" fill="#fff"/>
+ <text x="670" y="660" text-anchor="middle" font-size="30" font-weight="900" fill="#1a1a1a" letter-spacing="1">GIQU 332017 3</text>
+ <rect x="500" y="775" width="500" height="22" fill="#37352f"/>
+ <polygon points="850,640 960,640 1010,700 1010,775 850,775" fill="#5645d4" stroke="#3a2a99" stroke-width="5"/>
+ <polygon points="925,655 962,655 995,700 925,700" fill="#dcecfa" stroke="#3a2a99" stroke-width="4"/>
+ <rect x="990" y="740" width="24" height="26" fill="#f5d75e"/>
+ <g fill="#1a1a1a"><circle cx="580" cy="800" r="36"/><circle cx="680" cy="800" r="36"/><circle cx="930" cy="800" r="36"/></g>
+ <g fill="#c8c4be"><circle cx="580" cy="800" r="14"/><circle cx="680" cy="800" r="14"/><circle cx="930" cy="800" r="14"/></g>
+ <!-- Raju -->
+ <circle cx="950" cy="684" r="20" fill="#f2c9a0"/>
+ <path d="M930 674 Q950 650 970 674 L972 678 L928 678 Z" fill="#e03131"/>
+ <circle cx="943" cy="686" r="2.8" fill="#1a1a1a"/><circle cx="957" cy="686" r="2.8" fill="#1a1a1a"/>
+ <path d="M941 697 Q950 691 959 697" stroke="#1a1a1a" stroke-width="3" fill="none"/>
+ <path d="M974 680 Q980 692 974 700 Q968 692 974 680Z" fill="#7fb3dd"/>
+</g>
+<!-- Raju bubble -->
+<g><rect x="640" y="400" width="330" height="92" rx="22" fill="#fff" stroke="#1a1a1a" stroke-width="4"/><polygon points="925,490 962,490 950,640" fill="#fff" stroke="#1a1a1a" stroke-width="4" transform="translate(0,-2)"/><rect x="926" y="486" width="34" height="8" fill="#fff"/>
+<text x="805" y="436" text-anchor="middle" font-size="24" font-weight="800" fill="#1a1a1a">Ye system hai</text><text x="805" y="470" text-anchor="middle" font-size="24" font-weight="800" fill="#1a1a1a">ya mazaak?!</text></g>
+<!-- Sharma bubble -->
+<g><rect x="1120" y="250" width="440" height="112" rx="22" fill="#fff" stroke="#1a1a1a" stroke-width="4"/><polygon points="1290,360 1340,360 1327,490" fill="#fff" stroke="#1a1a1a" stroke-width="4"/><rect x="1292" y="356" width="46" height="8" fill="#fff"/>
+<text x="1340" y="293" text-anchor="middle" font-size="26" font-weight="800" fill="#1a1a1a">Ruko ruko! Aakhri ank hi</text><text x="1340" y="330" text-anchor="middle" font-size="26" font-weight="800" fill="#1a1a1a">nahi milta. Rules are rules!</text></g>
+<!-- Mehta ji -->
+<g>
+ <rect x="150" y="730" width="110" height="110" rx="10" fill="#f5d75e"/>
+ <circle cx="205" cy="700" r="36" fill="#f2c9a0"/>
+ <path d="M172 692 Q205 650 238 692 Z" fill="#37352f"/>
+ <circle cx="193" cy="705" r="3.5" fill="#1a1a1a"/><circle cx="217" cy="705" r="3.5" fill="#1a1a1a"/>
+ <path d="M190 718 Q205 732 220 718" stroke="#1a1a1a" stroke-width="4" fill="none"/>
+ <rect x="244" y="682" width="14" height="34" rx="4" fill="#1a1a1a" transform="rotate(12 250 700)"/>
+ <line x1="250" y1="760" x2="248" y2="712" stroke="#f5d75e" stroke-width="18" stroke-linecap="round"/>
+ <line x1="160" y1="765" x2="120" y2="790" stroke="#f5d75e" stroke-width="18" stroke-linecap="round"/>
+ <rect x="95" y="778" width="34" height="30" rx="5" fill="#fff" stroke="#37352f" stroke-width="3"/><path d="M105 770 q5-12 0-20 M117 770 q5-12 0-20" stroke="#fff" stroke-width="4" fill="none"/>
+</g>
+<g><rect x="300" y="650" width="230" height="64" rx="20" fill="#fff" stroke="#1a1a1a" stroke-width="4"/><polygon points="300,690 262,700 300,672" fill="#fff" stroke="#1a1a1a" stroke-width="4"/><rect x="298" y="672" width="8" height="20" fill="#fff"/>
+<text x="415" y="692" text-anchor="middle" font-size="28" font-weight="800" fill="#1a1a1a">Ho jayega!</text></g>
+<!-- mismatch badge -->
+<g transform="translate(0,0)">
+<rect x="420" y="40" width="760" height="150" rx="24" fill="#fff" stroke="#1a1a1a" stroke-width="4"/>
+<rect x="445" y="62" width="300" height="105" rx="12" fill="#d9f3e1"/><text x="595" y="92" text-anchor="middle" font-size="19" font-weight="800" fill="#37352f">SHIPPING BILL</text><text x="595" y="134" text-anchor="middle" font-size="30" font-weight="900" fill="#1a1a1a">GIQU 332017 3</text>
+<text x="812" y="130" text-anchor="middle" font-size="64" font-weight="900" fill="#e03131">≠</text>
+<rect x="855" y="62" width="300" height="105" rx="12" fill="#fde0ec"/><text x="1005" y="92" text-anchor="middle" font-size="19" font-weight="800" fill="#37352f">PACKING LIST</text><text x="1005" y="134" text-anchor="middle" font-size="30" font-weight="900" fill="#e03131">GIQU 332017 6</text>
+</g>
+<!-- clock -->
+<g><circle cx="160" cy="150" r="78" fill="#fff" stroke="#1a1a1a" stroke-width="7"/>
+<g stroke="#1a1a1a" stroke-width="5"><line x1="160" y1="86" x2="160" y2="100"/><line x1="160" y1="200" x2="160" y2="214"/><line x1="96" y1="150" x2="110" y2="150"/><line x1="210" y1="150" x2="224" y2="150"/></g>
+<line x1="160" y1="150" x2="160" y2="95" stroke="#e03131" stroke-width="7" stroke-linecap="round"/><line x1="160" y1="150" x2="188" y2="178" stroke="#1a1a1a" stroke-width="9" stroke-linecap="round"/><circle cx="160" cy="150" r="9" fill="#1a1a1a"/>
+<rect x="60" y="236" width="200" height="38" rx="10" fill="#e03131"/><text x="160" y="263" text-anchor="middle" font-size="21" font-weight="900" fill="#fff">CUTOFF NEAR!</text></g>
+<!-- sweat/stress marks -->
+<g stroke="#e03131" stroke-width="6" stroke-linecap="round"><line x1="1010" y1="610" x2="1040" y2="590"/><line x1="1015" y1="640" x2="1052" y2="632"/></g>
+<!-- banner -->
+<rect y="842" width="1600" height="58" fill="#0a1530"/>
+<text x="40" y="880" font-size="30" font-weight="900" fill="#fff">GATE PE GADBAD</text>
+<text x="360" y="880" font-size="24" fill="#d6b6f6">Ek typo. Truck wapas. Cutoff miss. Port pe jam.</text>
+<text x="1560" y="880" text-anchor="end" font-size="24" font-weight="800" fill="#f9e79f">GateIQ · Team Eureka</text>
+</svg>
