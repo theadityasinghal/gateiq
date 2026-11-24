@@ -46,7 +46,7 @@ All of this was made by driving the real app, so it is identical to what a perso
 | Account `meet` / `meet@123` | Transporter / Fleet Dispatcher |
 | Account `love` / `love@123` | Gate Entry Officer |
 | Account `ayush` / `ayush@123` | Consignee / Buyer, company Nordic Textile Imports GmbH |
-| Case | **`GIQ-26-SHMYHTN3`**: cotton T-shirts, Tiruppur to Chennai (INMAA1) to Hamburg, FOB, USD |
+| Case | **`GIQ-26-8M7AE25J`**: cotton T-shirts, Tiruppur to Chennai (INMAA1) to Hamburg, FOB, USD |
 | Invites | ayush, meet and love invited by bhanwar, and all three accepted |
 | Documents (7), added by bhanwar, each with its PDF attached | Shipping bill, commercial invoice, packing list, e-way bill, Form-13, VGM declaration, e-seal record |
 | Checks tab right now | "8 things need fixing, and 3 more to look at" |
@@ -106,7 +106,30 @@ The live part was run end to end by a script (`npm run demo:rehearse`) against t
 | Checks tab after the lorry receipt | "9 things need fixing, and 4 more to look at." |
 | `bhanwar` corrects the packing list container number | Worked. The Check digit card and the Container number card disappeared. Now "7 things need fixing, and 4 more to look at." |
 | `bhanwar` explains the consignee difference | Worked. The note shows on the card |
-| Verified info | Shows the buttons **I agree** and **Put this value forward** |
+| Verified info | Shows the four levels and a **Put this value forward** button on each value (I agree appears after a value is put forward) |
 | `love` (gate officer) | Case is on his dashboard, **View only** label shows, **no Add document** button, **no Explain** links |
 
-After the rehearsal the database was wiped and reseeded, so the case is back to its starting state with a **new Case ID: `GIQ-26-SHMYHTN3`**.
+After the rehearsal the database was wiped and reseeded, so the case is back to its starting state with a **new Case ID: `GIQ-26-8M7AE25J`**.
+
+---
+
+## Fact check of the demo script against the real site (24 November 2026)
+
+The whole flow was walked on the running app as bhanwar, meet and love, and every screen was compared with the script. These things in the script were wrong and are now fixed in `4_website_script` and `5_website_steps`:
+
+- The exporter's dashboard says **Your cases**. "Welcome, <name>" is only for meet and love.
+- The dashboard Progress column shows bars and one line ("Documents added · 4 of 5"). The full flow with **Gate: Not live yet** is on the case **Overview** (the Tracking strip), plus a line under the dashboard table.
+- The file box is labelled **Photo or PDF**. "Choose File" is only the browser's own button.
+- The "Read by Gemini" marks are small scan icons with hover text, not visible words. Uncertain fields get an orange outline, and there may be none.
+- The wrong container number shows on two cards: **Check digit** (with "Did it mean…") and **Container number** (five papers against the packing list).
+- The **Vehicle** card has two values, not three. A separate **Vehicle mismatch for container** card has no values.
+- After the packing-list correction the **Check digit** and **Container number** cards disappear (not a "container-mismatch" card).
+- The buttons on **Verified info** are **Put this value forward**. **I agree** only appears after a value has been put forward.
+- The Verified info page also shows a "Signed / matches source" level (the e-invoice QR). We do not talk about it. If asked: we are waiting for the official government keys.
+
+Checked and correct: the landing text, the sign-in page, the invite chain and Accepted tags, Copy Case ID, the Tracking strip, Add document and the pencil icon (hover text "Correct"), Read it, Check what was read, Add lorry receipt, the Checks sentences (9 and 4, then 7 and 4), What to do, Explain and Save, the view-only gate officer pages and the Activity timeline.
+
+The walk-through changed the case, so the database was wiped and reseeded again. The **Case ID is now `GIQ-26-8M7AE25J`**.
+
+Risk seen during the walk-through: Gemini answered "503 high demand" on one attempt (the free tier is sometimes overloaded). Keep the typed fallback ready (`info_to_type.pdf`).
+

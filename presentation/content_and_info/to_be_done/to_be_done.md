@@ -81,7 +81,7 @@ If you only added the lorry receipt in a rehearsal, you do not need a reset: sig
 To check the live part again without clicking, with the app running:
 
 ```bash
-CASE=GIQ-26-SHMYHTN3 npm run demo:rehearse
+CASE=GIQ-26-8M7AE25J npm run demo:rehearse
 ```
 
 It adds the lorry receipt, corrects the packing list, adds the explanation and checks the gate officer's view. It changes the case, so reset afterwards with the two commands above.

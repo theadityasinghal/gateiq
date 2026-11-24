@@ -10,7 +10,7 @@ The demo replays the skit: same case (cotton T-shirts, Tiruppur to Chennai to Ha
 
 **Mock files:** Scenario B (`mock_assets/B_planted-problems/`). The seven prepared documents are B1, B2, B3, B4, B6, B7 and B8. **B5, the lorry receipt, is added live.** Do not regenerate the mock files: it would wipe the whole `mock_assets/` folder, and it is not needed.
 
-**Case ID:** `GIQ-26-SHMYHTN3`
+**Case ID:** `GIQ-26-8M7AE25J`
 
 | Person | Username | Password | Account type | Used for |
 |---|---|---|---|---|
@@ -68,23 +68,23 @@ Rule: **the person who speaks also clicks.** The laptop stays on a table; each p
 3. Click **Password**, type `bhanwar@123`.
 4. Click the **Sign in** button.
 
-**Screen after:** the dashboard. "Welcome, Bhanwar", **Your cases**, a table with columns Case ID, Progress, Next step, Checks, Consignee, Created.
+**Screen after:** the dashboard. The heading says **Your cases** (with a **New case** button), then a table with columns Case ID, Progress, Next step, Checks, Consignee, Created. (Only people who are not the exporter see "Welcome, <name>".)
 
 **Say:** "So, yeah, you just saw what goes wrong at the gate. This is GateIQ. Basically, one shipment is one case, and right now we're logged in as the exporter. So let's open the case. Aditya, over to you."
 
 ### 2. Aditya (0:45 to 1:50): dashboard, Overview, People
 
-**Screen:** the dashboard. The Progress column shows the flow: case created, people invited, documents added, checks clean, and **Gate: Not live yet**.
+**Screen:** the dashboard. The Progress column shows coloured bars and one line under them: **Documents added · 4 of 5**. The Next step column says "Fix or explain 11 checks on your documents." The Checks column shows **8 needs fixing** and **3 please check**. Under the table, a line lists the whole flow, ending "then the gate (not live yet)".
 
 **Click:**
-1. Point at the Progress column and the **Next step** column.
+1. Point at the **Progress** bars and "Documents added · 4 of 5", the **Next step** column and the **Checks** column ("8 needs fixing", "3 please check").
 2. Click the **Case ID** in the row. The case page opens on **Overview**.
-3. Point at the Case ID at the top (and **Copy Case ID**), the **Tracking** strip and **Next for you**.
+3. Point at the Case ID at the top (and the **Copy Case ID** button), then the **Tracking** strip (Case created, People invited, Documents added, Checks clean, **Gate: Not live yet**), the line **Next for you** and the line **Still expected: Lorry receipt**.
 4. Scroll to **Route and terms** and the goods line.
 5. Click **People & invites** in the section bar.
 6. Point at **People on this case**: the owner, and three people marked **Accepted**. Point at **Invite by username**, but do not send anything.
 
-**Say:** "So this is the dashboard, and this little strip shows how far the case has got. Case created, people invited, documents added, checks, and then the gate. See, the gate says 'Not live yet', because, yeah, we haven't built that part, and we'd rather say it. Okay, let's open the case. Every case has an ID, and the last letter is a check character, so if you mistype it, it catches that. Now, people. The exporter invites everyone by username, and each person can only invite the next ones down the line. And a gate officer can be added by anyone, but he can only look. So these three have already accepted. Meet, the lorry receipt is yours."
+**Say:** "So this is the dashboard, and these bars show how far the case has got. It's at documents added, four of five, and over here it says what's next, and how many checks need fixing. Okay, let's open the case. Every case has an ID, and the last letter is a check character, so if you mistype it, it catches that. And this is the full flow: case created, people invited, documents added, checks, and then the gate. See, the gate says 'Not live yet', because, yeah, we haven't built that part, and we'd rather say it. It even says what's still expected, the lorry receipt. Now, people. The exporter invites everyone by username, and each person can only invite the next ones down the line. And a gate officer can be added by anyone, but he can only look. So these three have already accepted. Meet, the lorry receipt is yours."
 
 ### 3. Meet (1:50 to 2:45): the transporter starts adding the lorry receipt
 
@@ -92,19 +92,19 @@ Rule: **the person who speaks also clicks.** The laptop stays on a table; each p
 1. Switch to Meet's window (his dashboard).
 2. Point at **Cases shared with you**. The case is listed.
 3. Click the **Case ID**, then click **Documents** in the section bar.
-4. Click **Add document** (blue button, with an arrow). A list opens.
+4. Click **Add document** (blue button, with an arrow). A list opens with only the papers a transporter can add: **E-way bill**, **Lorry receipt**, **Form-13**.
 5. Click **Lorry receipt**.
-6. Under **How to add it**, **From a file** is already selected. Click **Choose file** and pick `B5_lorry-receipt.pdf`.
+6. Under **How to add it**, **From a file** is already selected. Click the file box under **Photo or PDF** (the browser's own button says "Choose File") and pick `B5_lorry-receipt.pdf`.
 7. Click **Read it**. The page says "Reading the document… this can take up to a minute." About 10 to 15 seconds on the dev server (it was 12 s in the rehearsal).
 
 **Say (while it reads):** "Okay, so only the transporter can add a lorry receipt, so we switch accounts. And see, the case is already on my dashboard, because the exporter invited me. So I upload the file, and now Gemini is reading it. Basically, we've told it to copy exactly what's printed, even if it's wrong, and never fix anything. Yeah, it takes a few seconds. Aditya, over to you."
 
 ### 4. Aditya (2:45 to 3:25): check what was read, save
 
-**Screen:** **Check what was read**, the form pre-filled, with "Nothing is saved until you confirm the form below." Fields are marked "Read by Gemini", and uncertain ones "Uncertain or failing a check: compare with the paper".
+**Screen:** **Check what was read** (with a small number next to it), then "Nothing is saved until you confirm the form below." and the form already filled in. A small scan icon sits beside each label (hover: "Read from the file"). A field the model was unsure about gets an orange outline; there may be none. The container number shows "Check digit OK".
 
 **Click:**
-1. Point at the pre-filled LR number, vehicle and **Packages**.
+1. Point at the pre-filled **LR number**, **Vehicle number** and **Packages**.
 2. Point at **Packages** and say the value.
 3. Scroll to the bottom and click **Add lorry receipt**.
 
@@ -116,17 +116,17 @@ Rule: **the person who speaks also clicks.** The laptop stays on a table; each p
 1. Switch to Bhanwar's window.
 2. Click **Checks** in the section bar.
 3. Read the sentence at the top (for example "N things need fixing, and M more to look at").
-4. Scroll to the **check digit** card (the packing list container). Point at "Did it mean…" and the values from the other papers.
-5. Scroll to the **Vehicle** card. Point at the three values and under each, which paper said it.
+4. Scroll to the **Check digit** card ("Fails the ISO 6346 check digit: almost certainly mistyped. Did it mean GIQU 332017 3 / …?", from the Packing list). Then the next card, **Container number**: one number on five papers, a different one on the Packing list.
+5. Scroll to the **Vehicle** card (the one just called "Vehicle", further down). Point at the two values (TN39BX7712 on the lorry receipt and e-seal, TN39BX7721 on the Form-13) and the papers named under each.
 
-**Say:** "Okay, so this is the Checks tab, and basically, these are the same mistakes from the skit. Each card tells you which papers disagree, and who said what. Like here, the packing list has a wrong container number, and then, below it, see, it even suggests what it probably meant. And it never says 'this paper is wrong', it just says these two disagree. So nobody is the one true source. Aditya, the rest?"
+**Say:** "Okay, so this is the Checks tab, and basically, these are the same mistakes from the skit. Each card tells you which papers disagree, and who said what. Like here, the packing list has a wrong container number, and it even suggests what it probably meant. And right below, see, the other five papers all agree on the right one. And it never says 'this paper is wrong', it just says these two disagree. So nobody is the one true source. Aditya, the rest?"
 
 ### 6. Aditya (4:10 to 4:55): the Checks tab, e-way bill and what to do
 
 **Click:**
 1. Scroll to the **E-way bill validity** card (expired) and **E-way bill Part B** (no vehicle).
 2. Point at the line **What to do**: "ask the … to correct it".
-3. Point at the packages card (580 against 600), the one that came from the live lorry receipt.
+3. Point at the **Packages** card (580 on the lorry receipt, 600 on the others, "Does not match the case's value."), the one that came from the live lorry receipt.
 
 **Say:** "Yeah, so then there's the e-way bill. It's expired, and the vehicle is empty, so that's exactly what gets a truck stopped on the road. And, see, every card says who can fix it, so nobody has to guess. Okay, so now the container number is on the exporter's own paper. Meet, can you fix that?"
 
@@ -135,9 +135,9 @@ Rule: **the person who speaks also clicks.** The laptop stays on a table; each p
 **Click:**
 1. Click **Documents** in the section bar.
 2. On the **Packing list** card, click the **pencil icon** (hover text: **Correct**).
-3. The page says **Correct packing list**. Click the container number field, replace `GIQU 332017 6` with `GIQU 332017 3`.
+3. The page says **Correct packing list**. Click the **Container number** field (a hint under it says "Check digit fails · GIQU3320173?"), replace `GIQU 332017 6` with `GIQU 332017 3`.
 4. Click **Save correction**.
-5. Click **Checks**. The check-digit card and the container-mismatch card are gone.
+5. Click **Checks**. The **Check digit** card and the **Container number** card are gone, and the top says "7 things need fixing, and 4 more to look at."
 
 **Say:** "So, yeah, only the person who added a paper can correct it. I click this pencil, change the number, and save. And basically, nothing gets overwritten, the old version stays in the history. Now go back to Checks, and, see, those two container cards are gone."
 
@@ -147,20 +147,20 @@ Rule: **the person who speaks also clicks.** The laptop stays on a table; each p
 1. Stay on **Checks**. Find the **Consignee** card ("Written a little differently from the case's value. Probably the same.").
 2. Click **Explain** under it. A text box opens.
 3. Type: `Same company, the invoice just adds "Trading"` and click **Save**.
-4. The card now shows the note and who wrote it.
-5. Click **Verified info** in the section bar. Point at a value, and at the buttons **I agree** and **Put this value forward**.
+4. The card now shows the note and who wrote it ("Bhanwar Lal (one of the people who added these papers): Same company…").
+5. Click **Verified info** in the section bar. The page opens with the four levels (1 Stated, 2 Agreed, 3 Signed / matches source, 4 Seen at gate: Not live yet). Scroll to **Shipping bill number**: two values, each with a **Put this value forward** button. Point at the buttons, but do not click. (**I agree** only appears once someone has put a value forward.)
 
-**Say:** "Okay, now this one, the buyer name. It's written a little differently, but it's the same company, so the owner can just explain it. I click Explain, write a quick reason, and save. And then it stays with the card, but, yeah, if the values change later, that note stops counting. Now, over in Verified info, every value has a label. So like, someone stated it, or someone in a different role agreed. And you can't agree with your own claim. Okay, Kartikeya, now the gate."
+**Say:** "Okay, now this one, the buyer name. It's written a little differently, but it's the same company, so the owner can just explain it. I click Explain, write a quick reason, and save. And then it stays with the card, but, yeah, if the values change later, that note stops counting. Now, over in Verified info, every value has a label. So like, someone puts it forward, and then someone in a different role can agree. And you can't agree with your own claim. Okay, Kartikeya, now the gate."
 
 ### 9. Kartikeya (6:50 to 7:35): the gate officer, view-only
 
 **Click:**
-1. Switch to Love's window (dashboard).
+1. Switch to Love's window (dashboard). It says "Welcome, Love" and **Cases shared with you**.
 2. Point at **Cases shared with you**: the case is on his dashboard because the exporter added him. Click the **Case ID**.
-3. Point at the **View only** label next to the Case ID.
-4. Click **Documents**: all eight papers are there, with **no Add document button**.
+3. Point at the **View only** label in the case header, beside "Filed baseline ready".
+4. Click **Documents**: all eight papers are there, with **no Add document button** and no pencil or bin icons.
 5. Click **Checks**: the flags are there, with no **Explain** link.
-6. Click **Activity**: the timeline of what happened.
+6. Click **Activity**: the timeline, with filters (All, Documents, People, Verified info and checks, Case). Point at entries like "Meet Bhut had a lorry receipt read", "Meet Bhut added a lorry receipt", "Bhanwar Lal corrected packing list" and "Bhanwar Lal explained a check on their own paper".
 
 **Say:** "So, yeah, now we're the gate officer. And see, he doesn't look anything up, the case is just already on his dashboard. He sees every paper, every flag, and the full history, and, basically, he can't change anything. No add button, no explain. So that mistake from the skit, it's caught way before the truck leaves."
 
@@ -196,3 +196,4 @@ The **Say** lines are written the way people actually talk, with filler words (s
 - **Why is the gate officer view-only?** The gate phase is not built. Today he sees everything and changes nothing.
 - **What if two people disagree?** Both values stay on the card with who said what. Someone in another role can agree with one of them, and the replaced value is kept in the history.
 - **Why not just OCR everything?** The problem is not reading. It is that nobody compares the papers.
+- **What is "Signed" on the Verified info page?** A level for values that carry a valid government signature. We are waiting for the official keys, so nothing is signed yet.
