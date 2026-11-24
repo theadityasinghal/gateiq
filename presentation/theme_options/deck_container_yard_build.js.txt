@@ -1,0 +1,122 @@
+const pptxgen = require("pptxgenjs");
+const pres = new pptxgen();
+pres.layout = "LAYOUT_16x9"; pres.title = "GateIQ"; pres.author = "Team Eureka";
+const NOTES = require("./notes.json");
+const INK="10243A", SKY="EAF2F8", TEAL="2A9D99", ORANGE="DD5B00", PURPLE="5645D4", RED="E03131", GREEN="1AAE39", YEL="F5B800", GREY="C8C4BE", ROAD="37352F", SLATE="5D5B54", WHITE="FFFFFF";
+const A="Arial", MONO="Courier New";
+
+// A shipping container: soft shadow, corrugated body, door bar on the right edge.
+function ct(s, x, y, w, h, color, name) {
+  s.addShape(pres.ShapeType.roundRect, { x, y: y + 0.06, w, h, fill: { color: "000000", transparency: 82 }, line: { color: "000000", transparency: 100, width: 0 }, rectRadius: 0.04, objectName: name + " shadow" });
+  s.addShape(pres.ShapeType.roundRect, { x, y, w, h, fill: { color }, line: { color, width: 0 }, rectRadius: 0.04, objectName: name });
+  for (let rx = x + 0.12; rx < x + w - 0.16; rx += 0.2) {
+    s.addShape(pres.ShapeType.rect, { x: rx, y: y + 0.05, w: 0.035, h: h - 0.1, fill: { color: "000000", transparency: 86 }, line: { color: "000000", transparency: 100, width: 0 }, objectName: name + " rib" });
+  }
+  s.addShape(pres.ShapeType.rect, { x: x + w - 0.1, y, w: 0.07, h, fill: { color: "000000", transparency: 65 }, line: { color: "000000", transparency: 100, width: 0 }, objectName: name + " door bar" });
+}
+function ground(s, dark) {
+  s.addShape(pres.ShapeType.rect, { x: 0, y: 5.05, w: 10, h: 0.575, fill: { color: dark ? "070F1B" : ROAD }, line: { color: dark ? "070F1B" : ROAD, width: 0 }, objectName: "Road" });
+  s.addShape(pres.ShapeType.line, { x: 0, y: 5.34, w: 10, h: 0, line: { color: "F5D75E", width: 3, dashType: "dash" }, objectName: "Road line" });
+}
+function ghost(s, n, dark) {
+  s.addText(n, { x: 7.4, y: 3.55, w: 2.4, h: 1.5, fontFace: A, fontSize: 100, bold: true, color: dark ? "1A3350" : "DCE6EE", align: "right", margin: 0, isTextBox: true, objectName: "Slide number" });
+}
+function eyebrow(s, t, color) { s.addText(t, { x: 0.5, y: 0.4, w: 9, h: 0.3, fontFace: A, fontSize: 11, bold: true, color, charSpacing: 5, margin: 0, isTextBox: true, objectName: "Eyebrow" }); }
+function title(s, t) { s.addText(t, { x: 0.5, y: 0.72, w: 9, h: 0.95, fontFace: A, fontSize: 28, bold: true, color: INK, margin: 0, valign: "top", isTextBox: true, objectName: "Title" }); }
+
+// ---------- 1 Title ----------
+let s = pres.addSlide(); s.background = { color: SKY };
+ghost(s, "01");
+s.addShape(pres.ShapeType.rect, { x: 6.25, y: 0, w: 0.12, h: 2.0, fill: { color: ORANGE }, line: { color: ORANGE, width: 0 }, objectName: "Crane mast" });
+s.addShape(pres.ShapeType.rect, { x: 4.3, y: 0.35, w: 3.7, h: 0.1, fill: { color: ORANGE }, line: { color: ORANGE, width: 0 }, objectName: "Crane arm" });
+s.addShape(pres.ShapeType.line, { x: 5.4, y: 0.45, w: 0, h: 0.65, line: { color: INK, width: 1.5 }, objectName: "Crane cable" });
+ct(s, 5.0, 1.1, 0.8, 0.4, RED, "Hanging container");
+ct(s, 6.45, 2.55, 1.6, 0.9, TEAL, "Stack bottom left");
+ct(s, 8.15, 2.55, 1.5, 0.9, PURPLE, "Stack bottom right");
+ct(s, 7.25, 1.6, 1.6, 0.9, ORANGE, "Stack top");
+s.addText("EXPORT CONSIGNMENT CHECKER", { x: 0.5, y: 0.45, w: 4.0, h: 0.3, fontFace: A, fontSize: 10, bold: true, color: PURPLE, charSpacing: 4, margin: 0, isTextBox: true });
+s.addText("GateIQ", { x: 0.45, y: 0.7, w: 4.6, h: 1.3, fontFace: A, fontSize: 80, bold: true, color: INK, margin: 0, isTextBox: true, objectName: "Title" });
+s.addText("Catch the mistake at the desk, not at the gate.", { x: 0.5, y: 2.05, w: 5.6, h: 0.45, fontFace: A, fontSize: 18, bold: true, color: INK, margin: 0, isTextBox: true });
+const TEAM = [["Love Rajawat", "25AI1023"], ["Aditya Singhal", "25AI1002"], ["Bhut Meet Umeshbhai", "25AI1015"], ["Bhanwar Lal", "25AI1014"], ["Kartikeya Jain", "25AI1020"], ["Ayush Yadav", "25AI1012"]];
+const TC = [TEAL, ORANGE, PURPLE, RED, YEL, GREEN];
+TEAM.forEach(([n, id], i) => {
+  const x = 0.5 + (i % 3) * 2.05, y = 3.3 + Math.floor(i / 3) * 0.82;
+  ct(s, x, y, 1.9, 0.68, TC[i], "Team " + n);
+  s.addShape(pres.ShapeType.roundRect, { x: x + 0.1, y: y + 0.09, w: 1.58, h: 0.5, fill: { color: WHITE }, line: { color: WHITE, width: 0 }, rectRadius: 0.03, objectName: "Plate " + n });
+  s.addText(n, { x: x + 0.15, y: y + 0.12, w: 1.5, h: 0.22, fontFace: A, fontSize: 9, bold: true, color: INK, margin: 0, isTextBox: true, fit: "shrink" });
+  s.addText(id, { x: x + 0.15, y: y + 0.35, w: 1.5, h: 0.2, fontFace: MONO, fontSize: 8.5, bold: true, color: SLATE, margin: 0, isTextBox: true });
+});
+s.addText([{ text: "TEAM EUREKA", options: { bold: true, fontSize: 13, breakLine: true } }, { text: "Guided by Prof. Kaushik Das", options: { fontSize: 11 } }], { x: 6.75, y: 3.6, w: 2.9, h: 0.7, fontFace: A, color: INK, margin: 0, valign: "top", isTextBox: true });
+ground(s, false);
+
+// ---------- 2 Problem ----------
+s = pres.addSlide(); s.background = { color: SKY };
+ghost(s, "02");
+eyebrow(s, "THE PROBLEM", RED); title(s, "One container, five papers, nobody comparing");
+const DOCS = [["SHIPPING BILL", "GIQU 332017 3", "Filed on ICEGATE"], ["LORRY RECEIPT", "GIQU 332017 3", "By the transporter"], ["FORM-13", "GIQU 332017 3", "For the terminal"], ["E-SEAL RECORD", "GIQU 332017 3", "From the seal"], ["PACKING LIST", "GIQU 332017 6", "By the exporter"]];
+DOCS.forEach(([d, v, who], i) => {
+  const x = 0.5 + i * 1.82, y = 1.8, bad = i === 4;
+  ct(s, x, y, 1.7, 1.25, bad ? RED : TEAL, "Paper " + d);
+  s.addShape(pres.ShapeType.roundRect, { x: x + 0.1, y: y + 0.1, w: 1.45, h: 0.62, fill: { color: WHITE }, line: { color: WHITE, width: 0 }, rectRadius: 0.03 });
+  s.addText(d, { x: x + 0.15, y: y + 0.14, w: 1.38, h: 0.2, fontFace: A, fontSize: 8, bold: true, color: SLATE, margin: 0, isTextBox: true });
+  s.addText(v, { x: x + 0.15, y: y + 0.38, w: 1.38, h: 0.28, fontFace: MONO, fontSize: 11, bold: true, color: bad ? RED : INK, margin: 0, isTextBox: true });
+  s.addText(who, { x: x + 0.12, y: y + 0.88, w: 1.4, h: 0.25, fontFace: A, fontSize: 10, bold: true, color: WHITE, margin: 0, isTextBox: true });
+});
+s.addShape(pres.ShapeType.roundRect, { x: 7.0, y: 1.5, w: 1.5, h: 0.3, fill: { color: "F5D75E" }, line: { color: "F5D75E", width: 0 }, rectRadius: 0.15, rotate: 4, objectName: "Wrong digit tag" });
+s.addText("WRONG DIGIT!", { x: 7.0, y: 1.5, w: 1.5, h: 0.3, fontFace: A, fontSize: 10, bold: true, color: INK, align: "center", valign: "middle", margin: 0, rotate: 4, isTextBox: true });
+[["WHY IT HAPPENS", "Each paper comes from a different person and a different system: customs, tax, the terminal, the transporter. They are never lined up side by side.", PURPLE, 0.5], ["WHAT IT COSTS", "The error is found at the gate: truck turned back, vessel cutoff missed, port jam, then detention and demurrage.", ORANGE, 5.1]].forEach(([h, b, c, x]) => {
+  ct(s, x, 3.3, 4.4, 1.5, c, h);
+  s.addText(h, { x: x + 0.25, y: 3.42, w: 3.8, h: 0.25, fontFace: A, fontSize: 9, bold: true, color: WHITE, charSpacing: 3, margin: 0, isTextBox: true });
+  s.addText(b, { x: x + 0.25, y: 3.72, w: 3.85, h: 1.0, fontFace: A, fontSize: 12.5, color: WHITE, margin: 0, valign: "top", isTextBox: true });
+});
+ground(s, false);
+
+// ---------- 3 Solution ----------
+s = pres.addSlide(); s.background = { color: SKY };
+ghost(s, "03");
+eyebrow(s, "THE SOLUTION", TEAL); title(s, "One case per shipment, paper checked against paper");
+[["One case", "Everything for one consignment lives in one place, under one Case ID with a check character that catches typos.", TEAL], ["Everyone adds their own", "Exporter, consignee, customs agent, transporter, driver. Invites go down the chain. A gate officer joins to view only.", ORANGE], ["Checked automatically", "Container, weights, truck, tax IDs, dates, consignee. Each flag shows who said what, and who can fix it.", PURPLE]].forEach(([h, b, c], i) => {
+  const x = 0.5 + i * 3.05;
+  ct(s, x, 1.75, 2.9, 1.75, c, "Pillar " + h);
+  s.addText(h, { x: x + 0.22, y: 1.86, w: 2.45, h: 0.62, fontFace: A, fontSize: 14.5, bold: true, color: WHITE, margin: 0, valign: "top", isTextBox: true });
+  s.addText(b, { x: x + 0.22, y: 2.55, w: 2.45, h: 0.9, fontFace: A, fontSize: 11.5, color: WHITE, margin: 0, valign: "top", isTextBox: true });
+});
+s.addText("EVERY VALUE CARRIES A LEVEL OF TRUST", { x: 0.5, y: 3.68, w: 9, h: 0.25, fontFace: A, fontSize: 10, bold: true, color: SLATE, charSpacing: 4, margin: 0, isTextBox: true });
+[["1 · STATED", "Someone put it forward", YEL, INK], ["2 · AGREED", "A different person in a different role says the same", GREEN, WHITE], ["3 · SEEN AT GATE", "Next phase", GREY, INK]].forEach(([h, b, c, t], i) => {
+  const x = 0.5 + i * 3.05;
+  ct(s, x, 4.0, 2.9, 0.82, c, "Level " + h);
+  s.addText(h, { x: x + 0.2, y: 4.07, w: 2.5, h: 0.28, fontFace: A, fontSize: 13, bold: true, color: t, margin: 0, isTextBox: true });
+  s.addText(b, { x: x + 0.2, y: 4.35, w: 2.5, h: 0.42, fontFace: A, fontSize: 10, color: t, margin: 0, valign: "top", isTextBox: true });
+});
+ground(s, false);
+
+// ---------- 4 How ----------
+s = pres.addSlide(); s.background = { color: SKY };
+ghost(s, "04");
+eyebrow(s, "HOW IT WORKS", PURPLE); title(s, "Reads the papers, checks them, keeps the record");
+[["1 · Read", "Gemini reads photos and PDFs and copies exactly what is printed, mistakes included. It never fixes anything. A person confirms every field before it is saved, and can correct it later.", TEAL], ["2 · Check", "Container check digit (ISO 6346). VGM less tare against the shipping bill. E-way bill expiry and vehicle. Consignee, HS codes, packages, weights, truck. Mismatches show who said what.", ORANGE], ["3 · Remember", "Nothing is overwritten: every entry is kept and hashed (SHA-256), and corrections are new versions. An explanation lapses if the values change. Every action is in the activity log.", PURPLE]].forEach(([h, b, c], i) => {
+  const x = 0.5 + i * 3.05;
+  ct(s, x, 1.75, 2.9, 2.75, c, "Step " + h);
+  s.addText(h, { x: x + 0.22, y: 1.9, w: 2.45, h: 0.4, fontFace: A, fontSize: 20, bold: true, color: WHITE, margin: 0, isTextBox: true });
+  s.addText(b, { x: x + 0.22, y: 2.4, w: 2.45, h: 2.0, fontFace: A, fontSize: 12, color: WHITE, margin: 0, valign: "top", isTextBox: true });
+});
+s.addText("Built with Next.js 16, Supabase Postgres and private storage (Mumbai), Better Auth, Gemini, tested with Vitest.", { x: 0.5, y: 4.62, w: 9, h: 0.32, fontFace: A, fontSize: 11, color: SLATE, margin: 0, isTextBox: true });
+ground(s, false);
+
+// ---------- 5 Next ----------
+s = pres.addSlide(); s.background = { color: INK };
+ghost(s, "05", true);
+s.addText("WHAT COMES NEXT", { x: 0.5, y: 0.4, w: 9, h: 0.3, fontFace: A, fontSize: 11, bold: true, color: "F5D75E", charSpacing: 5, margin: 0, isTextBox: true });
+s.addText("Three steps to the gate", { x: 0.5, y: 0.72, w: 9, h: 0.6, fontFace: A, fontSize: 30, bold: true, color: WHITE, margin: 0, isTextBox: true, objectName: "Title" });
+[["Connect", "ICEGATE and e-way bill lookups through ULIP, so filings arrive without retyping. The code is already built for it.", ORANGE], ["The gate", "Gate-side checks, including a value 'Seen at gate'. The dashboard marks it 'Not live yet'.", TEAL], ["Pilot", "Try it with one terminal and real papers, and measure the gate rejections it prevents.", PURPLE]].forEach(([h, b, c], i) => {
+  const x = 0.5 + i * 3.05;
+  ct(s, x, 1.5, 2.9, 1.75, c, "Next " + h);
+  s.addText(h, { x: x + 0.22, y: 1.63, w: 2.45, h: 0.4, fontFace: A, fontSize: 18, bold: true, color: WHITE, margin: 0, isTextBox: true });
+  s.addText(b, { x: x + 0.22, y: 2.1, w: 2.45, h: 1.1, fontFace: A, fontSize: 12, color: WHITE, margin: 0, valign: "top", isTextBox: true });
+});
+s.addText("Now, live.", { x: 0.5, y: 3.55, w: 7, h: 0.85, fontFace: A, fontSize: 46, bold: true, color: "F5D75E", margin: 0, isTextBox: true });
+s.addText("An exporter, a transporter and a gate officer, on the same case.", { x: 0.5, y: 4.42, w: 8.5, h: 0.4, fontFace: A, fontSize: 15, color: "D6B6F6", margin: 0, isTextBox: true });
+ground(s, true);
+
+pres.slides.forEach((sl, i) => sl.addNotes(NOTES[i]));
+pres.writeFile({ fileName: "/Users/aditya/codebase/GateIQ/presentation/3_GateIQ_slides.pptx" }).then(() => console.log("done"));
