@@ -6,6 +6,10 @@ Everything left for the team. What is finished is in `../done_already/done_alrea
 
 ---
 
+## The one folder to present from
+
+Everything needed during the demo is in this folder (`presentation/content_and_info/to_be_done/`): `B5_lorry-receipt.pdf` (the one file to upload) and `info_to_type.pdf` (logins, the text to type, and the typed fallback). The step-by-step script is `presentation/5_website_steps.pdf`.
+
 ## Checklist
 
 ### The day before
