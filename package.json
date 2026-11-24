@@ -15,7 +15,8 @@
     "masters:import": "tsx scripts/import-masters/index.ts",
     "db:wipe": "tsx scripts/wipe-data.ts",
     "mocks:generate": "tsx scripts/mock-assets/generate.ts",
-    "mocks:verify": "tsx scripts/mock-assets/verify.ts"
+    "mocks:verify": "tsx scripts/mock-assets/verify.ts",
+    "demo:seed": "tsx scripts/demo-seed/seed.ts"
   },
   "dependencies": {
     "@google/genai": "^3.0.0",
@@ -44,6 +45,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.5",
     "i18n-iso-countries": "^7.14.0",
+    "playwright-core": "^1.65.1",
     "qrcode": "^1.5.4",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
