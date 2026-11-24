@@ -70,7 +70,7 @@ Rule: **the person who speaks also clicks.** The laptop stays on a table; each p
 
 **Screen after:** the dashboard. "Welcome, Bhanwar", **Your cases**, a table with columns Case ID, Progress, Next step, Checks, Consignee, Created.
 
-**Say:** "You saw the problem. This is GateIQ. One shipment is one case, and this is the exporter's account. Let us open the case. Over to Aditya."
+**Say:** "So, yeah, you just saw what goes wrong at the gate. This is GateIQ. Basically, one shipment is one case, and right now we're logged in as the exporter. So let's open the case. Aditya, over to you."
 
 ### 2. Aditya (0:45 to 1:50): dashboard, Overview, People
 
@@ -84,7 +84,7 @@ Rule: **the person who speaks also clicks.** The laptop stays on a table; each p
 5. Click **People & invites** in the section bar.
 6. Point at **People on this case**: the owner, and three people marked **Accepted**. Point at **Invite by username**, but do not send anything.
 
-**Say:** "This strip shows how far the case has got. The last step, the gate, says 'Not live yet': we tell you honestly what is built. Every case has an ID with a check character, so a typo in it is caught. The exporter invites people by username, and each account type can only invite the next ones down the chain. A gate officer can be invited by anyone, and can only look. These three have accepted. Meet, the lorry receipt is yours."
+**Say:** "So this is the dashboard, and this little strip shows how far the case has got. Case created, people invited, documents added, checks, and then the gate. See, the gate says 'Not live yet', because, yeah, we haven't built that part, and we'd rather say it. Okay, let's open the case. Every case has an ID, and the last letter is a check character, so if you mistype it, it catches that. Now, people. The exporter invites everyone by username, and each person can only invite the next ones down the line. And a gate officer can be added by anyone, but he can only look. So these three have already accepted. Meet, the lorry receipt is yours."
 
 ### 3. Meet (1:50 to 2:45): the transporter starts adding the lorry receipt
 
@@ -97,7 +97,7 @@ Rule: **the person who speaks also clicks.** The laptop stays on a table; each p
 6. Under **How to add it**, **From a file** is already selected. Click **Choose file** and pick `B5_lorry-receipt.pdf`.
 7. Click **Read it**. The page says "Reading the document… this can take up to a minute." About 10 to 15 seconds on the dev server (it was 12 s in the rehearsal).
 
-**Say (while it reads):** "Only the transporter can add a lorry receipt, so we switch accounts. The case is on my dashboard because the exporter invited me. Now Gemini reads the page. It is told to copy exactly what is printed, and never to fix anything. Aditya, over to you."
+**Say (while it reads):** "Okay, so only the transporter can add a lorry receipt, so we switch accounts. And see, the case is already on my dashboard, because the exporter invited me. So I upload the file, and now Gemini is reading it. Basically, we've told it to copy exactly what's printed, even if it's wrong, and never fix anything. Yeah, it takes a few seconds. Aditya, over to you."
 
 ### 4. Aditya (2:45 to 3:25): check what was read, save
 
@@ -108,7 +108,7 @@ Rule: **the person who speaks also clicks.** The laptop stays on a table; each p
 2. Point at **Packages** and say the value.
 3. Scroll to the bottom and click **Add lorry receipt**.
 
-**Say:** "Nothing is saved until a person confirms it. It read 580 packages. The shipping bill says 600, and so far nobody has told the transporter. Kartikeya, let us see what GateIQ makes of it."
+**Say:** "So, nothing gets saved until a person checks it. Like, here, it says 580 packages. And, remember, the shipping bill says 600. Nobody has told the transporter yet. So let's save it, and then Kartikeya will show what GateIQ does with that."
 
 ### 5. Kartikeya (3:25 to 4:10): the Checks tab, first two flags
 
@@ -119,7 +119,7 @@ Rule: **the person who speaks also clicks.** The laptop stays on a table; each p
 4. Scroll to the **check digit** card (the packing list container). Point at "Did it mean…" and the values from the other papers.
 5. Scroll to the **Vehicle** card. Point at the three values and under each, which paper said it.
 
-**Say:** "Same mistakes as the skit, in plain words. Each card shows which papers disagree and who said what. It does not say 'this paper is wrong'. Nobody is the single source of truth."
+**Say:** "Okay, so this is the Checks tab, and basically, these are the same mistakes from the skit. Each card tells you which papers disagree, and who said what. Like here, the packing list has a wrong container number, and then, below it, see, it even suggests what it probably meant. And it never says 'this paper is wrong', it just says these two disagree. So nobody is the one true source. Aditya, the rest?"
 
 ### 6. Aditya (4:10 to 4:55): the Checks tab, e-way bill and what to do
 
@@ -128,7 +128,7 @@ Rule: **the person who speaks also clicks.** The laptop stays on a table; each p
 2. Point at the line **What to do**: "ask the … to correct it".
 3. Point at the packages card (580 against 600), the one that came from the live lorry receipt.
 
-**Say:** "The expired e-way bill with no vehicle is what stops a truck on the road. Every card also says who can fix it, so nobody has to guess. Meet, the container number is the exporter's own paper."
+**Say:** "Yeah, so then there's the e-way bill. It's expired, and the vehicle is empty, so that's exactly what gets a truck stopped on the road. And, see, every card says who can fix it, so nobody has to guess. Okay, so now the container number is on the exporter's own paper. Meet, can you fix that?"
 
 ### 7. Meet (4:55 to 5:45): correct the packing list
 
@@ -139,7 +139,7 @@ Rule: **the person who speaks also clicks.** The laptop stays on a table; each p
 4. Click **Save correction**.
 5. Click **Checks**. The check-digit card and the container-mismatch card are gone.
 
-**Say:** "Only the person who added a paper can correct it. The earlier version stays in the record trail, and nothing is overwritten. The two container flags are gone."
+**Say:** "So, yeah, only the person who added a paper can correct it. I click this pencil, change the number, and save. And basically, nothing gets overwritten, the old version stays in the history. Now go back to Checks, and, see, those two container cards are gone."
 
 ### 8. Aditya (5:45 to 6:50): explain a difference, then Verified info
 
@@ -150,7 +150,7 @@ Rule: **the person who speaks also clicks.** The laptop stays on a table; each p
 4. The card now shows the note and who wrote it.
 5. Click **Verified info** in the section bar. Point at a value, and at the buttons **I agree** and **Put this value forward**.
 
-**Say:** "If something is expected, the owner can explain it, and the note is kept with the flag. It lapses if the values change. Every value carries a label: stated, or agreed by someone in another role. Nobody can agree with their own claim. Kartikeya, now the gate."
+**Say:** "Okay, now this one, the buyer name. It's written a little differently, but it's the same company, so the owner can just explain it. I click Explain, write a quick reason, and save. And then it stays with the card, but, yeah, if the values change later, that note stops counting. Now, over in Verified info, every value has a label. So like, someone stated it, or someone in a different role agreed. And you can't agree with your own claim. Okay, Kartikeya, now the gate."
 
 ### 9. Kartikeya (6:50 to 7:35): the gate officer, view-only
 
@@ -162,13 +162,19 @@ Rule: **the person who speaks also clicks.** The laptop stays on a table; each p
 5. Click **Checks**: the flags are there, with no **Explain** link.
 6. Click **Activity**: the timeline of what happened.
 
-**Say:** "The gate officer does not look anything up. The case is on his dashboard before the truck leaves. He sees every paper, every flag and the full history, and he can change nothing."
+**Say:** "So, yeah, now we're the gate officer. And see, he doesn't look anything up, the case is just already on his dashboard. He sees every paper, every flag, and the full history, and, basically, he can't change anything. No add button, no explain. So that mistake from the skit, it's caught way before the truck leaves."
 
 ### 10. All three (7:35 to 8:00): close
 
-**Kartikeya:** "Same mistakes as the skit, caught at the desk."
-**Meet:** "The gate side is the next phase."
-**Aditya:** "Thank you. We are happy to take questions."
+**Kartikeya:** "So, yeah, same mistakes as the skit, just caught at the desk instead of the gate."
+**Meet:** "And the gate side, that's basically what we build next."
+**Aditya:** "Okay, so that's GateIQ. Thank you, and, yeah, we're happy to take questions."
+
+---
+
+## How to say it
+
+The **Say** lines are written the way people actually talk, with filler words (so, like, basically, yeah, okay). Do not memorise them. Know the point of each turn, talk while you click, and keep the little connecting words. It should feel like you are explaining it to a friend, not reading out a slide. Keep the hand-over line at the end of each turn, that is what makes the switch feel smooth.
 
 ---
 

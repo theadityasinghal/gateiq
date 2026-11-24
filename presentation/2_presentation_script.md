@@ -18,39 +18,39 @@ Kartikeya walks on with the clicker during the skit's final bow. Aditya, Kartike
 
 ## Slide 1: GateIQ  (Kartikeya, 0:10)
 
-> What you just saw is the problem. Four slides on what we built, and then we will show it to you live. We are Team Eureka, and this is GateIQ: catch the mistake at the desk, not at the gate.
+> So, yeah, what you just saw, that's the problem. Now I'll quickly show what we built, and then we'll show it live. We're Team Eureka, and this is GateIQ. Basically, catch the mistake at the desk, not at the gate.
 
 ## Slide 2: One container, five papers, nobody comparing  (Kartikeya, 0:40)
 
 *(Point at the red box.)*
 
-> In the skit, one container number sat on five papers. Four of them say the same thing. The packing list has a different last digit, and that number fails the container check digit.
+> So, like in the skit, there was one container number written on five different papers. Four of them say the same thing, but then the packing list has a different last digit, and that number actually fails the container check digit.
 >
-> The papers come from different people and different systems: customs, tax, the terminal, the transporter. Nobody puts them side by side. So the mistake is found at the gate, which is the most expensive place: the truck turns back, the vessel cutoff is missed, the port jams, and detention and demurrage follow.
+> And basically, these papers come from different people and different systems, customs, tax, the terminal, the transporter. Nobody ever puts them side by side. So the mistake only shows up at the gate, which is the worst place. The truck turns back, the ship's cutoff is missed, the port jams, and then you're paying detention and demurrage.
 
 ## Slide 3: One case per shipment, paper checked against paper  (Ayush, 0:50)
 
-> GateIQ is one case per shipment. The exporter creates it and invites the others, down the chain: consignee, customs agent, transporter, then the driver. A gate officer can be invited to view. Each person adds their own papers, and GateIQ compares every fact across all of them. Every flag shows who said what, and who can fix it.
+> Okay, so GateIQ is basically one case per shipment. The exporter creates it, and then invites the others, like the consignee, the customs agent, the transporter, and then the driver. And a gate officer can be added just to view. Everyone adds their own papers, and GateIQ compares every fact across all of them. And each flag tells you who said what, and who can fix it.
 >
-> The idea we are proudest of: nobody is the single source of truth. Every value carries a label. *Stated* means someone put it forward. *Agreed* means a different person, in a different role, says the same. That catches slips; it is not proof. Nobody can raise their own claim. *Seen at gate* is the next phase.
+> Now, the idea we like most is, nobody is the single source of truth. So every value has a label. Stated means someone put it forward. Agreed means a different person, in a different role, says the same thing. So that catches slips, but, yeah, it's not proof. And nobody can agree with their own claim. And then, "seen at gate", that's the next phase.
 
 ## Slide 4: Reads the papers, checks them, keeps the record  (Bhanwar, 0:45)
 
-> Three things. **Read:** Gemini reads photos and PDFs, and we tell it to copy exactly what is printed, so a typo on the paper is read as a typo. A person confirms every field before it is saved, and can correct it later.
+> So it does three things. First, **read**. Gemini reads the photos and PDFs, and we've told it to copy exactly what's printed, so if the paper has a typo, it reads the typo. Then a person checks every field before it's saved, and can fix it later.
 >
-> **Check:** the container check digit, VGM minus tare against the shipping bill, e-way bill expiry and vehicle, the consignee name, HS codes, packages, weights and the truck.
+> Then, **check**. So, the container check digit, the weight, the e-way bill, the buyer name, the HS codes, packages, the truck, all that.
 >
-> **Remember:** nothing is overwritten. Every entry is kept and hashed, and a correction is a new version. If someone explains a flag away, that note lapses when the values change. Every action is in the activity log.
-
-*(One breath for the stack line: Next.js, Supabase in Mumbai, Better Auth, Gemini, Vitest.)*
+> And finally, **remember**. Basically nothing gets overwritten. Every entry is kept, and a correction is just a new version. And if someone explains a flag away, that note stops counting if the values change. Plus, everything is in an activity log.
 
 ## Slide 5: What comes next, then "Now, live."  (Bhanwar, 0:30)
 
-> Next: connect to ICEGATE and the e-way bill system through ULIP. The code already goes through one interface for filings, so that is an addition, not a rewrite. Then the gate side, which the dashboard marks as not live yet. Then a pilot at one terminal with real papers.
+> So, what's next? We want to connect to ICEGATE and the e-way bill system, and the code is already set up for that, so it's an addition, not a rewrite. Then the gate side, which, yeah, the dashboard says is not live yet. And then, basically, a pilot at one terminal with real papers.
 >
-> Now let us show you all of it, live: an exporter, a transporter and a gate officer, on one case.
+> Okay, so now let's just show you, live. An exporter, a transporter and a gate officer, all on one case.
 
-*(Hand over: Aditya, Kartikeya and Meet take the laptop.)*
+## How to say it
+
+The lines above are written the way people actually talk, with filler words (so, like, basically, yeah, okay). Do not memorise them word for word. Know the point of each slide, say it in your own words, and keep the little connecting words, they are what makes it sound like a conversation and not a reading.
 
 ---
 
