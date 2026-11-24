@@ -10,7 +10,7 @@ The demo replays the skit: same case (cotton T-shirts, Tiruppur to Chennai to Ha
 
 **Mock files:** Scenario B (`mock_assets/B_planted-problems/`). The seven prepared documents are B1, B2, B3, B4, B6, B7 and B8. **B5, the lorry receipt, is added live.** Do not regenerate the mock files: it would wipe the whole `mock_assets/` folder, and it is not needed.
 
-**Case ID:** `GIQ-26-M73NH7JW`
+**Case ID:** `GIQ-26-SHMYHTN3`
 
 | Person | Username | Password | Account type | Used for |
 |---|---|---|---|---|
@@ -21,7 +21,7 @@ The demo replays the skit: same case (cotton T-shirts, Tiruppur to Chennai to Ha
 
 These passwords are for the demo only. Do not reuse them anywhere real.
 
-Starting state of the Checks tab (before the lorry receipt): **"8 things need fixing, and 3 more to look at."** After the lorry receipt is added there will be more (packages, vehicle, weight). Read the real sentence on stage.
+Starting state of the Checks tab (before the lorry receipt): **"8 things need fixing, and 3 more to look at."** After the lorry receipt is added it reads **"9 things need fixing, and 4 more to look at."** After the packing-list correction: **"7 things need fixing, and 4 more to look at."** (Both were checked in a rehearsal.)
 
 ---
 
@@ -95,7 +95,7 @@ Rule: **the person who speaks also clicks.** The laptop stays on a table; each p
 4. Click **Add document** (blue button, with an arrow). A list opens.
 5. Click **Lorry receipt**.
 6. Under **How to add it**, **From a file** is already selected. Click **Choose file** and pick `B5_lorry-receipt.pdf`.
-7. Click **Read it**. The page says "Reading the document… this can take up to a minute." Usually about 5 seconds.
+7. Click **Read it**. The page says "Reading the document… this can take up to a minute." About 10 to 15 seconds on the dev server (it was 12 s in the rehearsal).
 
 **Say (while it reads):** "Only the transporter can add a lorry receipt, so we switch accounts. The case is on my dashboard because the exporter invited me. Now Gemini reads the page. It is told to copy exactly what is printed, and never to fix anything. Aditya, over to you."
 

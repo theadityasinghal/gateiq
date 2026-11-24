@@ -46,7 +46,7 @@ All of this was made by driving the real app, so it is identical to what a perso
 | Account `meet` / `meet@123` | Transporter / Fleet Dispatcher |
 | Account `love` / `love@123` | Gate Entry Officer |
 | Account `ayush` / `ayush@123` | Consignee / Buyer, company Nordic Textile Imports GmbH |
-| Case | **`GIQ-26-M73NH7JW`**: cotton T-shirts, Tiruppur to Chennai (INMAA1) to Hamburg, FOB, USD |
+| Case | **`GIQ-26-SHMYHTN3`**: cotton T-shirts, Tiruppur to Chennai (INMAA1) to Hamburg, FOB, USD |
 | Invites | ayush, meet and love invited by bhanwar, and all three accepted |
 | Documents (7), added by bhanwar, each with its PDF attached | Shipping bill, commercial invoice, packing list, e-way bill, Form-13, VGM declaration, e-seal record |
 | Checks tab right now | "8 things need fixing, and 3 more to look at" |
@@ -92,3 +92,21 @@ Scenario B only, in `mock_assets/B_planted-problems/`. The values were taken fro
 - Nothing is connected to ICEGATE or the e-way bill system yet. That is the next step.
 - Gemini only reads documents, and a person confirms every field before it is saved.
 - The slides and the demo do not mention QR codes or signed e-invoices.
+
+---
+
+## Rehearsed and checked (24 November 2026)
+
+The live part was run end to end by a script (`npm run demo:rehearse`) against the seeded case, then everything was reset and reseeded.
+
+| Step | Result |
+|---|---|
+| `meet` sees the case on the dashboard and has **Add document** | Yes |
+| Lorry receipt read by Gemini from `B5_lorry-receipt.pdf` | Took about 12 seconds. Read LR CFL/TPR/26/3301, truck TN39BX7712, **580 packages**, 4,500 kg, driver Selvam Murugan. Added fine |
+| Checks tab after the lorry receipt | "9 things need fixing, and 4 more to look at." |
+| `bhanwar` corrects the packing list container number | Worked. The Check digit card and the Container number card disappeared. Now "7 things need fixing, and 4 more to look at." |
+| `bhanwar` explains the consignee difference | Worked. The note shows on the card |
+| Verified info | Shows the buttons **I agree** and **Put this value forward** |
+| `love` (gate officer) | Case is on his dashboard, **View only** label shows, **no Add document** button, **no Explain** links |
+
+After the rehearsal the database was wiped and reseeded, so the case is back to its starting state with a **new Case ID: `GIQ-26-SHMYHTN3`**.

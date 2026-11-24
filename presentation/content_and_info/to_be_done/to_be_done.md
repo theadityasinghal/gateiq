@@ -10,7 +10,7 @@ Everything left for the team. What is finished is in `../done_already/done_alrea
 
 ### The day before
 - [ ] Sign in once as each of the four accounts on the **live site** you will present on, to confirm the data is there. (The seed ran through a local copy of the app, but it writes to the same database. If the live site uses a different database, tell me and I will seed that one.)
-- [ ] Open the case as `meet` and do a **rehearsal** of adding the lorry receipt (Gemini needs wifi). Note how long the reading takes.
+- [x] ~~Rehearse adding the lorry receipt~~ done by script, see `done_already`. Still worth doing once by hand with all three of you, with real wifi.
 - [ ] Rehearse the full 8-minute run once, with all three presenters, using the exact steps in `4_website_script.md`.
 - [ ] After a rehearsal, **reset to the starting state** (see section 5).
 - [ ] Rehearse the skit, then the skit plus slides plus demo handovers.
@@ -71,3 +71,13 @@ If you only added the lorry receipt in a rehearsal, you do not need a reset: sig
 | A page is slow | Keep talking, do not click again |
 | Someone is signed in as the wrong person | Each person has their own window: switch windows, do not sign out |
 | Save correction does not clear the flags | Reload the case page, open Checks again, otherwise continue with the video |
+
+## Rehearsal script (optional)
+
+To check the live part again without clicking, with the app running:
+
+```bash
+CASE=GIQ-26-SHMYHTN3 npm run demo:rehearse
+```
+
+It adds the lorry receipt, corrects the packing list, adds the explanation and checks the gate officer's view. It changes the case, so reset afterwards with the two commands above.

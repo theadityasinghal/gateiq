@@ -16,7 +16,8 @@
     "db:wipe": "tsx scripts/wipe-data.ts",
     "mocks:generate": "tsx scripts/mock-assets/generate.ts",
     "mocks:verify": "tsx scripts/mock-assets/verify.ts",
-    "demo:seed": "tsx scripts/demo-seed/seed.ts"
+    "demo:seed": "tsx scripts/demo-seed/seed.ts",
+    "demo:rehearse": "tsx scripts/demo-seed/rehearse.ts"
   },
   "dependencies": {
     "@google/genai": "^3.0.0",
