@@ -11,7 +11,7 @@ What has been written, prepared and set up. Nothing here needs doing again. What
 | Part | Length | Who | Files |
 |---|---|---|---|
 | Skit | about 3 min | Love (Sharma ji), Meet (Raju), Bhanwar (Mehta ji), Ayush (narrator); Kartikeya and Aditya do the horns | `1_skit.md` / `.pdf` |
-| Slides | about 3.5 min, 5 slides | Kartikeya (1-2), Ayush (3), Bhanwar (4-5) | `3_GateIQ_slides.pptx`, `2_presentation_script.md` / `.pdf` |
+| Slides | about 3.5 min, 5 slides | Love(1), Kartikeya (2), Ayush (3), Bhanwar (4-5) | `3_GateIQ_slides.pptx`, `2_presentation_script.md` / `.pdf` |
 | Live website | about 8 min | Aditya (4 turns), Kartikeya (3 turns), Meet (2 turns) | `4_website_script.md` / `.pdf` |
 
 ---
